@@ -16,8 +16,11 @@ const firebaseConfig = {
 };
 
 // Inicializamos la instancia global de Firebase
+console.log("🔥 Inicializando núcleo asíncrono de Firebase...");
 const app = initializeApp(firebaseConfig);
 
 // Exportamos las herramientas listas para usar en la capa Service y Controller
 export const db = getFirestore(app);
 export const auth = getAuth(app);
+
+console.log("✅ Servicios db (Firestore) y auth (Authentication) exportados correctamente.");

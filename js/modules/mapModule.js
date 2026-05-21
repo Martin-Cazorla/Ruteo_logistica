@@ -7,12 +7,13 @@ export class MapModule {
      * @param {Function} onSelectionCallback Ejecutado al seleccionar múltiples pedidos en mapa
      */
     constructor(mapElementId, onSelectionCallback) {
+        // Inicializamos el mapa centrado en Buenos Aires
         this.map = L.map(mapElementId).setView([-34.6037, -58.3816], 12);
         this.markerCluster = L.markerClusterGroup();
         this.onSelection = onSelectionCallback;
         this.currentMarkers = new Map();
 
-        // Configuración de los iconos globales por CDN
+        // Configuración segura y unificada de los iconos globales por CDN libre
         delete L.Icon.Default.prototype._getIconUrl;
         L.Icon.Default.mergeOptions({
             iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -24,32 +25,33 @@ export class MapModule {
     }
 
     _initTileLayer() {
-        // Servidor Voyager estable con código 200 verificado
-        const tiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        // CORREGIDO: Usamos el CDN base universal de OSM que no utiliza subdominios cruzados ni rompe sockets HTTP/2
+        const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
-            attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
-            subdomains: 'abcd'
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(this.map);
         
         this.map.addLayer(this.markerCluster);
 
-        // BLINDAJE OPERATIVO: Escuchamos el primer impacto de carga de red exitoso
-        // En cuanto el servidor nos devuelva los azulejos, forzamos a Leaflet a recalcular su tamaño físico
+        // BLINDAJE OPERATIVO: Forzamos el recálculo geométrico en múltiples ciclos críticos del DOM
         tiles.once('tileload', () => {
             setTimeout(() => {
-                this.map.invalidateSize();
-                console.log("🗺️ Lienzo gráfico de Leaflet repintado con éxito tras carga de red.");
-            }, 200);
+                if (this.map) {
+                    this.map.invalidateSize();
+                    console.log("🗺️ Capa de mapa cargada: Dimensiones recalculadas con éxito.");
+                }
+            }, 100);
         });
 
-        // Disparador de contingencia inicial
+        // Disparador de seguridad por si el evento asíncrono tarda en impactar
         setTimeout(() => {
-            this.map.invalidateSize();
-        }, 400);
+            if (this.map) this.map.invalidateSize();
+        }, 500);
     }
 
     /**
-     * Renderiza o actualiza marcadores de forma masiva
+     * Renderiza o actualiza marcadores de forma masiva en el mapa
+     * @param {Array} pedidos 
      */
     updateMarkers(pedidos) {
         this.markerCluster.clearLayers();
@@ -63,6 +65,7 @@ export class MapModule {
             const colorClass = this._getColorByFranja(pedido.franjaHoraria);
             let markerOptions = {};
 
+            // Renderizado de alertas críticas (Efecto fuego)
             if (pedido.esCritico) {
                 const fireIcon = L.divIcon({
                     className: `marker-critical-fire ${colorClass}`,

@@ -2,13 +2,17 @@
 import Sanitizer from '../utils/sanitizers.js';
 
 export class MapModule {
+    /**
+     * @param {string} mapElementId 
+     * @param {Function} onSelectionCallback Ejecutado al seleccionar múltiples pedidos en mapa
+     */
     constructor(mapElementId, onSelectionCallback) {
         this.map = L.map(mapElementId).setView([-34.6037, -58.3816], 12);
         this.markerCluster = L.markerClusterGroup();
         this.onSelection = onSelectionCallback;
         this.currentMarkers = new Map();
 
-        // Enrutamiento global de los pines por CDN
+        // Enrutamiento global de los pines por CDN para GitHub Pages / Live Server
         delete L.Icon.Default.prototype._getIconUrl;
         L.Icon.Default.mergeOptions({
             iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -28,20 +32,24 @@ export class MapModule {
         
         this.map.addLayer(this.markerCluster);
 
-        // Forzamos la actualización geométrica del lienzo
         setTimeout(() => {
             this.map.invalidateSize();
         }, 300);
     }
 
+    /**
+     * Renderiza o actualiza marcadores de forma masiva
+     * @param {Array} pedidos 
+     */
     updateMarkers(pedidos) {
         this.markerCluster.clearLayers();
         this.currentMarkers.clear();
 
         pedidos.forEach(pedido => {
-            if (!pedido.coordenadas || typeof pedido.coordenadas.lat === 'undefined' || typeof pedido.coordenadas.lng === 'undefined') {
-                console.warn(`⚠️ OMITIENDO PEDIDO SIN COORDENADAS: Orden #${pedido.numeroPedido}`);
-                return;
+            // CORREGIDO: Validación de cortocircuito ultra estricta y profunda de tres niveles
+            if (!pedido || !pedido.coordenadas || typeof pedido.coordenadas.lat === 'undefined' || typeof pedido.coordenadas.lng === 'undefined' || pedido.coordenadas.lat === null) {
+                console.warn(`⚠️ OMITIENDO PEDIDO CORRUPTO: Orden #${pedido?.numeroPedido || 'Desconocida'} no posee geolocalización en Firestore.`);
+                return; // Salta de forma segura al siguiente pedido sin romper el flujo
             }
 
             const colorClass = this._getColorByFranja(pedido.franjaHoraria);
@@ -56,6 +64,7 @@ export class MapModule {
                 markerOptions = { icon: fireIcon };
             }
 
+            // Es 100% seguro ejecutar la instanciación porque pasó el filtro previo
             const marker = L.marker([pedido.coordenadas.lat, pedido.coordenadas.lng], markerOptions);
             const safeMotivo = Sanitizer.escapeHTML(pedido.motivoCritico || 'Sin reclamos pendientes');
             

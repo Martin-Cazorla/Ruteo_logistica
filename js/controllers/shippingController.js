@@ -56,7 +56,12 @@ export class ShippingController {
     }
 
     setupEventListeners() {
-        if (!this.filterSelect) return;
+        // CORREGIDO: Cláusula de guarda para evitar que el script se detenga si el elemento del DOM tarda en responder
+        if (!this.filterSelect) {
+            console.warn("⚠️ Elemento #filter-franja no detectado en el DOM actual. Reintentando asignación.");
+            return;
+        }
+
         this.filterSelect.addEventListener('change', (e) => {
             const currentStore = store.getState();
             const filtrosActuales = currentStore.filtros || { fecha: new Date().toISOString().split('T')[0], franjaHoraria: 'all' };
@@ -128,6 +133,7 @@ export class ShippingController {
     }
 }
 
+// Inicialización de la instancia asegurando la carga estructural del DOM completo
 document.addEventListener('DOMContentLoaded', () => {
     const shippingCtrl = new ShippingController();
     shippingCtrl.init();

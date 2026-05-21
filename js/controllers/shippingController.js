@@ -1,10 +1,9 @@
-// pages/js/controllers/shippingController.js
-import store from '../../js/state/store.js'; // CORREGIDO: Apunta a la raíz del proyecto
-import { MapModule } from '../modules/mapModule.js'; // Se queda igual (mismo árbol interno de pages/js)
-import { db } from '../../js/services/firebaseConfig.js'; // CORREGIDO: Apunta a la raíz del proyecto
-import Sanitizer from '../../js/utils/sanitizers.js'; // CORREGIDO: Apunta a la raíz del proyecto
-
-// El resto de tu código del archivo se queda exactamente igual...
+// js/controllers/shippingController.js
+import store from '../state/store.js'; 
+import { MapModule } from '../modules/mapModule.js'; 
+import { db } from '../services/firebaseConfig.js'; 
+import Sanitizer from '../utils/sanitizers.js'; 
+import { collection, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
 export class ShippingController {
     constructor() {
@@ -13,15 +12,11 @@ export class ShippingController {
         this.sidebarContainer = null;
     }
 
-    /**
-     * Punto de entrada único del módulo de asignación geográfica
-     */
     init() {
-        // Mapeamos los elementos del DOM de forma segura
         this.filterSelect = document.getElementById('filter-franja');
         this.sidebarContainer = document.getElementById('pedidos-list-append');
 
-        // 1. Instanciamos el mapa una sola vez de forma persistente
+        // Inicializamos el mapa persistente
         if (!this.mapModule) {
             try {
                 this.mapModule = new MapModule('map', (selectedIds) => {
@@ -32,26 +27,17 @@ export class ShippingController {
             }
         }
 
-        // 2. Suscribirse de forma reactiva al almacén de estado (Single Source of Truth)
         store.subscribe((state) => this.render(state));
-
-        // 3. Activar los escuchadores de eventos de la interfaz (Filtros select)
         this.setupEventListeners();
-
-        // 4. Conectar la base de datos en tiempo real para alimentar el Store
         this.conectarPedidosFirestore();
     }
 
-    /**
-     * Escucha los pedidos del día en la base de datos y actualiza el estado global
-     */
     conectarPedidosFirestore() {
         const fechaHoy = new Date().toISOString().split('T')[0];
         const q = query(collection(db, "pedidos"), where("fecha", "==", fechaHoy));
 
         onSnapshot(q, (snapshot) => {
             const pedidosData = [];
-            
             snapshot.forEach((docSnap) => {
                 pedidosData.push({
                     id: docSnap.id,
@@ -60,24 +46,17 @@ export class ShippingController {
             });
 
             const currentStore = store.getState();
-            
-            // Inyectamos los pedidos manteniendo los filtros seleccionados intactos
             store.setState({
                 ...currentStore,
                 pedidos: pedidosData
             });
         }, (error) => {
             console.error("Fallo crítico en el canal de datos de transporte: ", error);
-            alert("No se pudieron sincronizar los pedidos en tiempo real.");
         });
     }
 
-    /**
-     * Vincula las acciones del operador con los cambios de estado correspondientes
-     */
     setupEventListeners() {
         if (!this.filterSelect) return;
-
         this.filterSelect.addEventListener('change', (e) => {
             const currentStore = store.getState();
             const filtrosActuales = currentStore.filtros || { fecha: new Date().toISOString().split('T')[0], franjaHoraria: 'all' };
@@ -89,31 +68,20 @@ export class ShippingController {
         });
     }
 
-    /**
-     * Procesa y distribuye los datos filtrados hacia el mapa y la barra lateral
-     * @param {Object} state Estado actual del store global
-     */
     render(state) {
         const pedidos = state?.pedidos || [];
         const filtros = state?.filtros || { franjaHoraria: 'all' };
 
-        // Filtro dinámico del lado del cliente de alto rendimiento
         const pedidosFiltrados = pedidos.filter(pedido => {
-            const matchFranja = filtros.franjaHoraria === 'all' || pedido.franjaHoraria === filtros.franjaHoraria;
-            return matchFranja;
+            return filtros.franjaHoraria === 'all' || pedido.franjaHoraria === filtros.franjaHoraria;
         });
 
         if (this.mapModule) {
             this.mapModule.updateMarkers(pedidosFiltrados);
         }
-        
         this.renderListSidebar(pedidosFiltrados);
     }
 
-    /**
-     * Construye dinámicamente la lista de órdenes pendientes aplicando mitigación de XSS
-     * @param {Array} pedidos Lista de pedidos filtrados
-     */
     renderListSidebar(pedidos) {
         if (!this.sidebarContainer) return;
         
@@ -160,7 +128,6 @@ export class ShippingController {
     }
 }
 
-// Inicialización de la instancia al cargar la vista
 document.addEventListener('DOMContentLoaded', () => {
     const shippingCtrl = new ShippingController();
     shippingCtrl.init();

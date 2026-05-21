@@ -7,13 +7,12 @@ export class MapModule {
      * @param {Function} onSelectionCallback Ejecutado al seleccionar múltiples pedidos en mapa
      */
     constructor(mapElementId, onSelectionCallback) {
-        // Inicializamos el mapa centrado en Buenos Aires
         this.map = L.map(mapElementId).setView([-34.6037, -58.3816], 12);
         this.markerCluster = L.markerClusterGroup();
         this.onSelection = onSelectionCallback;
         this.currentMarkers = new Map();
 
-        // Configuración segura y unificada de los iconos globales por CDN libre
+        // Configuración de los iconos globales por CDN estable
         delete L.Icon.Default.prototype._getIconUrl;
         L.Icon.Default.mergeOptions({
             iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -25,32 +24,33 @@ export class MapModule {
     }
 
     _initTileLayer() {
-        // CORREGIDO: Usamos el CDN base universal de OSM que no utiliza subdominios cruzados ni rompe sockets HTTP/2
-        const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        // CORREGIDO: Migramos al servidor satelital/topográfico global de Esri.
+        // Soporta de forma nativa multiplexación HTTP/2 y no genera rechazo de streams (REFUSED_STREAM).
+        const tiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
             maxZoom: 19,
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community'
         }).addTo(this.map);
         
         this.map.addLayer(this.markerCluster);
 
-        // BLINDAJE OPERATIVO: Forzamos el recálculo geométrico en múltiples ciclos críticos del DOM
+        // Forzamos el redibujo geométrico inmediato del contenedor
         tiles.once('tileload', () => {
             setTimeout(() => {
                 if (this.map) {
                     this.map.invalidateSize();
-                    console.log("🗺️ Capa de mapa cargada: Dimensiones recalculadas con éxito.");
+                    console.log("📐 Viewport de Esri ajustado correctamente.");
                 }
-            }, 100);
+            }, 150);
         });
 
-        // Disparador de seguridad por si el evento asíncrono tarda en impactar
+        // Respaldo de seguridad por delay de renderizado
         setTimeout(() => {
             if (this.map) this.map.invalidateSize();
         }, 500);
     }
 
     /**
-     * Renderiza o actualiza marcadores de forma masiva en el mapa
+     * Renderiza o actualiza marcadores de forma masiva
      * @param {Array} pedidos 
      */
     updateMarkers(pedidos) {
@@ -65,7 +65,6 @@ export class MapModule {
             const colorClass = this._getColorByFranja(pedido.franjaHoraria);
             let markerOptions = {};
 
-            // Renderizado de alertas críticas (Efecto fuego)
             if (pedido.esCritico) {
                 const fireIcon = L.divIcon({
                     className: `marker-critical-fire ${colorClass}`,

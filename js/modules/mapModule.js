@@ -2,14 +2,17 @@
 import Sanitizer from '../utils/sanitizers.js';
 
 export class MapModule {
+    /**
+     * @param {string} mapElementId 
+     * @param {Function} onSelectionCallback Ejecutado al seleccionar múltiples pedidos en mapa
+     */
     constructor(mapElementId, onSelectionCallback) {
-        // Inicializamos el mapa centrado en Buenos Aires
         this.map = L.map(mapElementId).setView([-34.6037, -58.3816], 12);
         this.markerCluster = L.markerClusterGroup();
         this.onSelection = onSelectionCallback;
         this.currentMarkers = new Map();
 
-        // Enrutamiento de iconos por CDN estándar
+        // Configuración de los iconos globales por CDN
         delete L.Icon.Default.prototype._getIconUrl;
         L.Icon.Default.mergeOptions({
             iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -21,15 +24,28 @@ export class MapModule {
     }
 
     _initTileLayer() {
-        // SERVIDOR ALTERNATIVO BLINDADO (Wikimedia / CARTO Dark No Labels Hybrid)
-        // Usamos las capas estables de Wikimedia o CartoDB Voyager que no generan bloqueo 403 en redes locales
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        // Servidor Voyager estable con código 200 verificado
+        const tiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
             maxZoom: 19,
             attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
             subdomains: 'abcd'
         }).addTo(this.map);
         
         this.map.addLayer(this.markerCluster);
+
+        // BLINDAJE OPERATIVO: Escuchamos el primer impacto de carga de red exitoso
+        // En cuanto el servidor nos devuelva los azulejos, forzamos a Leaflet a recalcular su tamaño físico
+        tiles.once('tileload', () => {
+            setTimeout(() => {
+                this.map.invalidateSize();
+                console.log("🗺️ Lienzo gráfico de Leaflet repintado con éxito tras carga de red.");
+            }, 200);
+        });
+
+        // Disparador de contingencia inicial
+        setTimeout(() => {
+            this.map.invalidateSize();
+        }, 400);
     }
 
     /**

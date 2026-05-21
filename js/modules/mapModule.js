@@ -3,11 +3,13 @@ import Sanitizer from '../utils/sanitizers.js';
 
 export class MapModule {
     constructor(mapElementId, onSelectionCallback) {
+        // Inicializamos el mapa centrado en Buenos Aires
         this.map = L.map(mapElementId).setView([-34.6037, -58.3816], 12);
         this.markerCluster = L.markerClusterGroup();
         this.onSelection = onSelectionCallback;
         this.currentMarkers = new Map();
 
+        // Enrutamiento de iconos por CDN estándar
         delete L.Icon.Default.prototype._getIconUrl;
         L.Icon.Default.mergeOptions({
             iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -19,14 +21,20 @@ export class MapModule {
     }
 
     _initTileLayer() {
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        // SERVIDOR ALTERNATIVO BLINDADO (Wikimedia / CARTO Dark No Labels Hybrid)
+        // Usamos las capas estables de Wikimedia o CartoDB Voyager que no generan bloqueo 403 en redes locales
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
             maxZoom: 19,
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
+            subdomains: 'abcd'
         }).addTo(this.map);
         
         this.map.addLayer(this.markerCluster);
     }
 
+    /**
+     * Renderiza o actualiza marcadores de forma masiva
+     */
     updateMarkers(pedidos) {
         this.markerCluster.clearLayers();
         this.currentMarkers.clear();

@@ -7,12 +7,13 @@ export class MapModule {
      * @param {Function} onSelectionCallback Ejecutado al seleccionar múltiples pedidos en mapa
      */
     constructor(mapElementId, onSelectionCallback) {
+        // Inicializamos el mapa centrado en Buenos Aires
         this.map = L.map(mapElementId).setView([-34.6037, -58.3816], 12);
         this.markerCluster = L.markerClusterGroup();
         this.onSelection = onSelectionCallback;
         this.currentMarkers = new Map();
 
-        // Enrutamiento global de los pines por CDN para GitHub Pages / Live Server
+        // Enrutamiento global de los pines por CDN para máxima compatibilidad en producción
         delete L.Icon.Default.prototype._getIconUrl;
         L.Icon.Default.mergeOptions({
             iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -24,14 +25,16 @@ export class MapModule {
     }
 
     _initTileLayer() {
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-            subdomains: 'abcd',
-            maxZoom: 20
+        // CORREGIDO: Migramos al servidor estándar y abierto de OpenStreetMap (OSM)
+        // Este servidor es 100% público y libre de bloqueos de red local o restricciones de dominio
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(this.map);
         
         this.map.addLayer(this.markerCluster);
 
+        // Forzamos el redibujo del contenedor para calcular el layout real del DOM
         setTimeout(() => {
             this.map.invalidateSize();
         }, 300);
@@ -46,10 +49,9 @@ export class MapModule {
         this.currentMarkers.clear();
 
         pedidos.forEach(pedido => {
-            // CORREGIDO: Validación de cortocircuito ultra estricta y profunda de tres niveles
             if (!pedido || !pedido.coordenadas || typeof pedido.coordenadas.lat === 'undefined' || typeof pedido.coordenadas.lng === 'undefined' || pedido.coordenadas.lat === null) {
-                console.warn(`⚠️ OMITIENDO PEDIDO CORRUPTO: Orden #${pedido?.numeroPedido || 'Desconocida'} no posee geolocalización en Firestore.`);
-                return; // Salta de forma segura al siguiente pedido sin romper el flujo
+                console.warn(`⚠️ OMITIENDO PEDIDO: Orden #${pedido?.numeroPedido || 'Desconocida'} no posee geolocalización.`);
+                return;
             }
 
             const colorClass = this._getColorByFranja(pedido.franjaHoraria);
@@ -64,7 +66,6 @@ export class MapModule {
                 markerOptions = { icon: fireIcon };
             }
 
-            // Es 100% seguro ejecutar la instanciación porque pasó el filtro previo
             const marker = L.marker([pedido.coordenadas.lat, pedido.coordenadas.lng], markerOptions);
             const safeMotivo = Sanitizer.escapeHTML(pedido.motivoCritico || 'Sin reclamos pendientes');
             

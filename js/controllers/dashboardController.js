@@ -138,7 +138,6 @@ export class DashboardController {
     escucharUnidadesJornada(fecha) {
         if (!this.unidadesContainer) return;
 
-        // Lee de la colección unificada de unidades operativas de transporte
         const q = query(collection(db, "unidades"), where("fecha", "==", fecha));
         
         this.unsubscribeUnidades = onSnapshot(q, (snapshot) => {
@@ -156,22 +155,24 @@ export class DashboardController {
                 htmlHTML += `
                     <article class="card-panel" data-id="${id}">
                         <div class="panel-actions-header">
-                            <h3 class="section-title">${Sanitizer.escapeHTML(u.nombre)}</h3>
+                            <h3 class="section-title">Interno #${Sanitizer.escapeHTML(u.interno)}</h3>
                             <span class="badge badge--info">Ingreso: ${Sanitizer.escapeHTML(u.ingreso)} hs</span>
                         </div>
+                        <p><strong>Chofer Asignado:</strong> ${Sanitizer.escapeHTML(u.chofer)}</p>
+                        <p><strong>Modelo de Vehículo:</strong> ${Sanitizer.escapeHTML(u.modelo)}</p>
                         <p><strong>Vuelta de Salida:</strong> Vuelta ${Sanitizer.escapeHTML(u.salida)} hs</p>
                         <p><strong>Vueltas totales:</strong> ${Sanitizer.escapeHTML(u.vueltas)} 
-                            ${parseInt(u.vueltas) >= 4 ? '<span class="badge badge--danger">EXTRA ACTIVADO</span>' : ''}
+                            ${parseInt(u.vueltas) >= 4 ? '<span class="badge badge--danger" style="margin-left:0.5rem; display:inline-block;">EXTRA ACTIVADO</span>' : ''}
                         </p>
                         <p><strong>Entrega en Campo:</strong> ${u.entregaCampo ? '<span class="badge badge--success">SÍ</span>' : 'NO'}</p>
                         ${u.notas ? `<p style="color:#94a3b8; font-size:0.85rem;"><em>Nota: ${Sanitizer.escapeHTML(u.notas)}</em></p>` : ''}
                         <hr class="separator">
-                        <button class="btn-primary btn-delete-unidad" style="background-color:#ef4444;" data-id="${id}">Eliminar Unidad</button>
+                        <button class="btn-primary btn-delete-unidad" style="background-color:#ef4444;" data-id="${id}">Remover de la Jornada</button>
                     </article>
                 `;
             });
 
-            this.unidadesContainer.innerHTML = htmlHTML || `<div style="color:#94a3b8; padding:2rem; grid-column:1/-1; text-align:center;">No hay unidades asignadas para hoy. Registre desde la sección Flota.</div>`;
+            this.unidadesContainer.innerHTML = htmlHTML || `<div style="color:#94a3b8; padding:2rem; grid-column:1/-1; text-align:center;">No hay unidades asignadas para hoy. Ingrese el número de interno en el formulario flotante.</div>`;
             
             if (this.countTotal) this.countTotal.textContent = total;
             if (this.countDisp) this.countDisp.textContent = enVuelta;
@@ -186,11 +187,11 @@ export class DashboardController {
         botones.forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const id = e.target.getAttribute('data-id');
-                if (confirm("¿Desea remover esta unidad de la jornada operativa?")) {
+                if (confirm("¿Desea remover esta unidad de la planilla de hoy? No afectará al Fichero Maestro.")) {
                     try {
                         await deleteDoc(doc(db, "unidades", id));
                     } catch (err) {
-                        console.error("Error al borrar de Firestore: ", err);
+                        console.error("Error al borrar de la jornada operativa: ", err);
                     }
                 }
             });
@@ -218,7 +219,7 @@ export class DashboardController {
                 </div>
                 <span class="badge badge--info">$${parseFloat(p.importe).toLocaleString('es-AR')}</span>
             </div>
-        `).join('') || '<div style="color:#94a3b8; padding:1rem; text-align:center;">No hay órdenes.</div>';
+        `).join('') || '<div style="color:#94a3b8; padding:1rem; text-align:center;">No hay órdenes cargadas hoy.</div>';
     }
 
     escucharClientesTiempoReal() {
@@ -232,7 +233,7 @@ export class DashboardController {
                     <strong>${Sanitizer.escapeHTML(c.nombre)}</strong> (DNI: ${Sanitizer.escapeHTML(c.dni)})<br>
                     <span style="font-size:0.85rem; color:#94a3b8;">📍 ${Sanitizer.escapeHTML(c.direccion)}</span>
                 </div>
-            `).join('') || '<div style="color:#94a3b8; padding:1rem; text-align:center;">No hay clientes.</div>';
+            `).join('') || '<div style="color:#94a3b8; padding:1rem; text-align:center;">No hay clientes en la base central.</div>';
         });
     }
 
@@ -311,7 +312,7 @@ export class DashboardController {
                     }));
 
                     await DatabaseService.guardarPedidosMasivos(pedidosEstructurados);
-                    alert("¡Inyección exitosa!");
+                    alert("¡Inyección masiva completada con éxito!");
                     this.pedidosCargadosExcel = [];
                     this.excelInput.value = "";
                 } catch (err) {
@@ -322,54 +323,52 @@ export class DashboardController {
     }
 
     setupFormSubmissions() {
-        // Formulario de contingencia para dar de alta una unidad directamente de forma local
-        // Alta operativa de unidades diarias cruzando datos con el Fichero de Transporte
+        // Alta operativa de unidades diarias cruzando datos con el Fichero Maestro de Flota
         if (this.formAltaUnidad) {
             this.formAltaUnidad.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 
-                // El operador ahora ingresa únicamente el número de interno (ID del maestro)
                 const internoIngresado = document.getElementById('u-nombre').value.trim();
                 const fechaActualBarra = this.globalDateFilter.value;
 
                 try {
-                    // Consultamos de forma asíncrona la base de datos de flota central
-                    const maestroRef = doc(db, "flota_maestra", internoIngresado);
+                    // Consultamos de forma asíncrona la colección maestra de transporte
                     const maestroSnap = await getDocs(query(collection(db, "flota_maestra")));
                     
-                    // Buscamos si existe el interno
                     let datosMaestros = null;
                     maestroSnap.forEach(docSnap => {
                         if (docSnap.id === internoIngresado) datosMaestros = docSnap.data();
                     });
 
+                    // Si el interno no existe en el registro permanente de transporte, frena la operación
                     if (!datosMaestros) {
-                        alert(`❌ El Interno #${internoIngresado} no existe en el Fichero Maestro de Transporte. Registre la unidad primero en la sección Flota.`);
+                        alert(`❌ El Interno #${internoIngresado} no existe en el Fichero Maestro. Registre el camión primero en la pestaña de Flota.`);
                         return;
                     }
 
-                    // Si existe, estructuramos la planilla de la jornada mezclando los datos fijos con las variables diarias
+                    // Cruzamos los datos fijos del maestro (chofer, modelo, tamaño) con las variables de la jornada activa
                     const dataOperativa = {
                         interno: internoIngresado,
-                        nombre: `Interno ${internoIngresado} - ${datosMaestros.chofer}`, // Combina el chofer fijo
-                        tamanio: datosMaestros.tamanio,                                // Hereda el tamaño fijo
-                        ingreso: document.getElementById('u-ingreso').value,           // Variable diaria
-                        salida: document.getElementById('u-salida').value,             // Variable diaria
-                        vueltas: document.getElementById('u-vueltas').value,           // Variable diaria
-                        entregaCampo: document.getElementById('u-campo').checked,      // Variable diaria
-                        notas: document.getElementById('u-notas').value.trim(),        // Variable diaria
-                        fecha: fechaActualBarra                                        // Jornada activa
+                        chofer: datosMaestros.chofer,
+                        modelo: datosMaestros.modelo,
+                        tamanio: datosMaestros.tamanio,
+                        ingreso: document.getElementById('u-ingreso').value,
+                        salida: document.getElementById('u-salida').value,
+                        vueltas: document.getElementById('u-vueltas').value,
+                        entregaCampo: document.getElementById('u-campo').checked,
+                        notas: document.getElementById('u-notas').value.trim(),
+                        fecha: fechaActualBarra
                     };
 
-                    // Guardamos la instancia en la colección diaria "unidades"
+                    // Guardamos la instancia en la planilla del día
                     await addDoc(collection(db, "unidades"), dataOperativa);
                     
                     this.formAltaUnidad.reset();
                     this.toggleModal(this.modalUnidad, false);
-                    alert(`✅ Unidad #${internoIngresado} inyectada con éxito a la jornada del día.`);
+                    alert(`✅ Unidad #${internoIngresado} inyectada con éxito a la planilla operativa de hoy.`);
 
                 } catch (err) {
-                    console.error("Error en el cruce de datos relacionales: ", err);
+                    console.error("Fallo crítico en el cruce relacional: ", err);
                 }
             });
         }

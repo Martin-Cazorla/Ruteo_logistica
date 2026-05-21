@@ -16,7 +16,6 @@ export class ShippingController {
         this.filterSelect = document.getElementById('filter-franja');
         this.sidebarContainer = document.getElementById('pedidos-list-append');
 
-        // Inicializamos el mapa persistente
         if (!this.mapModule) {
             try {
                 this.mapModule = new MapModule('map', (selectedIds) => {
@@ -33,15 +32,32 @@ export class ShippingController {
     }
 
     conectarPedidosFirestore() {
+        // CORREGIDO: Obtenemos la fecha actual en formato YYYY-MM-DD
         const fechaHoy = new Date().toISOString().split('T')[0];
-        const q = query(collection(db, "pedidos"), where("fecha", "==", fechaHoy));
+        
+        // ADAPTADO: Apuntamos al campo 'fecha_creacion' que es el nombre real en tu Firestore
+        const q = query(collection(db, "pedidos"), where("fecha_creacion", "==", fechaHoy));
 
         onSnapshot(q, (snapshot) => {
             const pedidosData = [];
             snapshot.forEach((docSnap) => {
+                const data = docSnap.data();
+                
+                // MAPEO RECEPTOR: Adaptamos la estructura de Firebase a lo que espera nuestra interfaz
                 pedidosData.push({
                     id: docSnap.id,
-                    ...docSnap.data()
+                    fecha: data.fecha_creacion,
+                    franjaHoraria: data.franjaHoraria || '10:00-14:00',
+                    importe: data.importe || 0,
+                    esCritico: data.esCritico || false,
+                    motivoCritico: data.motivoCritico || '',
+                    // ADAPTADO: Mapeamos 'numero_pedido' (Firebase) a 'numeroPedido' (JS)
+                    numeroPedido: data.numero_pedido || 'S/N',
+                    // ADAPTADO: Mapeamos 'coordenada' (singular de Firebase) a 'coordenadas' (plural de JS)
+                    coordenadas: data.coordenada ? {
+                        lat: parseFloat(data.coordenada.lat),
+                        lng: parseFloat(data.coordenada.lng)
+                    } : null
                 });
             });
 
@@ -56,11 +72,7 @@ export class ShippingController {
     }
 
     setupEventListeners() {
-        // CORREGIDO: Cláusula de guarda para evitar que el script se detenga si el elemento del DOM tarda en responder
-        if (!this.filterSelect) {
-            console.warn("⚠️ Elemento #filter-franja no detectado en el DOM actual. Reintentando asignación.");
-            return;
-        }
+        if (!this.filterSelect) return;
 
         this.filterSelect.addEventListener('change', (e) => {
             const currentStore = store.getState();
@@ -83,6 +95,8 @@ export class ShippingController {
 
         if (this.mapModule) {
             this.mapModule.updateMarkers(pedidosFiltrados);
+            // Aseguramos que Leaflet recalcule el contenedor dinámicamente
+            this.mapModule.map.invalidateSize();
         }
         this.renderListSidebar(pedidosFiltrados);
     }
@@ -93,7 +107,7 @@ export class ShippingController {
         if (pedidos.length === 0) {
             this.sidebarContainer.innerHTML = `
                 <div style="color: #94a3b8; text-align: center; padding: 2rem; font-size: 0.9rem;">
-                    No hay pedidos asignados a esta ventana horaria.
+                    No hay pedidos para la jornada de hoy.
                 </div>
             `;
             return;
@@ -129,11 +143,10 @@ export class ShippingController {
     }
 
     handleMassAssignment(selectedIds) {
-        console.log(`Asignando lote de ${selectedIds.length} pedidos a una unidad logística.`);
+        console.log(`Asignando lote de ${selectedIds.length} pedidos.`);
     }
 }
 
-// Inicialización de la instancia asegurando la carga estructural del DOM completo
 document.addEventListener('DOMContentLoaded', () => {
     const shippingCtrl = new ShippingController();
     shippingCtrl.init();

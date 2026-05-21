@@ -1,6 +1,6 @@
-// pages/js/modules/mapModule.js
-// CORREGIDO: Ruta de importación adaptada al árbol interno de la carpeta /pages/js
-import Sanitizer from '../../js/utils/sanitizers.js';
+// js/modules/mapModule.js
+// CORREGIDO: Ruta relativa exacta saliendo de modules (../) y entrando a utils/
+import Sanitizer from '../utils/sanitizers.js';
 
 export class MapModule {
     /**
@@ -8,32 +8,42 @@ export class MapModule {
      * @param {Function} onSelectionCallback Ejecutado al seleccionar múltiples pedidos en mapa
      */
     constructor(mapElementId, onSelectionCallback) {
+        // Inicializamos el mapa centrado en Buenos Aires
         this.map = L.map(mapElementId).setView([-34.6037, -58.3816], 12);
         this.markerCluster = L.markerClusterGroup();
         this.onSelection = onSelectionCallback;
         this.currentMarkers = new Map();
 
+        // OPTIMIZACIÓN LOGÍSTICA: Forzamos a Leaflet a descargar las imágenes de los pines de su CDN oficial
+        // Esto evita errores de "recurso no encontrado (404)" cuando la app corre en servidores web o en GitHub Pages
+        delete L.Icon.Default.prototype._getIconUrl;
+        L.Icon.Default.mergeOptions({
+            iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+            iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+            shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+        });
+
         this._initTileLayer();
     }
 
     _initTileLayer() {
-            // Servidor global CDN de CARTO (Dark Matter), libre de bloqueos en entornos de desarrollo local
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                subdomains: 'abcd',
-                maxZoom: 20
-            }).addTo(this.map);
-            
-            this.map.addLayer(this.markerCluster);
+        // Servidor CDN de CARTO (Dark Matter), libre de bloqueos perimetrales
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 20
+        }).addTo(this.map);
+        
+        this.map.addLayer(this.markerCluster);
 
-            // CORREGIDO: Forzamos el redibujo completo del lienzo para adaptarlo a las dimensiones reales del viewport
-            setTimeout(() => {
-                this.map.invalidateSize();
-            }, 250);
-        }
+        // Forzamos el ajuste asíncrono del lienzo para calcular el viewport real
+        setTimeout(() => {
+            this.map.invalidateSize();
+        }, 250);
+    }
 
     /**
-     * Renderiza o actualiza marcadores masivos
+     * Renderiza o actualiza marcadores de forma masiva
      * @param {Array} pedidos 
      */
     updateMarkers(pedidos) {
@@ -44,6 +54,7 @@ export class MapModule {
             const colorClass = this._getColorByFranja(pedido.franjaHoraria);
             let markerOptions = {};
 
+            // Renderizado de alertas personalizadas para Clientes Críticos
             if (pedido.esCritico) {
                 const fireIcon = L.divIcon({
                     className: `marker-critical-fire ${colorClass}`,

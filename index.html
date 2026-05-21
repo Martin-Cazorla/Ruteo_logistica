@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Martinez Routing - Control Central</title>
+    <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+
+    <header class="app-header">
+        <nav class="app-navbar" aria-label="Menú global del ecosistema">
+            <div class="brand-title">Martinez Routing Central</div>
+            <div class="dashboard-counters">
+                <a href="index.html" class="badge badge--info badge--active" style="text-decoration:none;">Inicio</a>
+                <a href="pages/dashboard.html" class="badge badge--info" style="text-decoration:none;">Panel de Carga</a>
+                <a href="pages/shipping.html" class="badge badge--info" style="text-decoration:none;">Consola Mapa</a>
+                <a href="pages/transporte.html" class="badge badge--info" style="text-decoration:none;">Flota</a>
+                <a href="pages/administracion.html" class="badge badge--info" style="text-decoration:none;">Seguridad</a>
+            </div>
+        </nav>
+    </header>
+
+    <main style="padding: 2rem; background-color: #0f172a; min-height: calc(100vh - 70px);">
+        <section aria-label="Métricas de rendimiento operativo" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+            <div class="card-panel">
+                <span style="color: #94a3b8; text-transform: uppercase; font-size: 0.8rem; font-weight: 600;">Pedidos de la Jornada</span>
+                <strong id="kpi-pedidos" style="color: #f8fafc; font-size: 2.2rem; margin-top: 0.5rem;">0</strong>
+            </div>
+            <div class="card-panel">
+                <span style="color: #94a3b8; text-transform: uppercase; font-size: 0.8rem; font-weight: 600;">Unidades Desplegadas</span>
+                <strong id="kpi-unidades" style="color: #3b82f6; font-size: 2.2rem; margin-top: 0.5rem;">0</strong>
+            </div>
+            <div class="card-panel">
+                <span style="color: #94a3b8; text-transform: uppercase; font-size: 0.8rem; font-weight: 600;">Alertas por Horas Extras</span>
+                <strong id="kpi-extras" style="color: #ef4444; font-size: 2.2rem; margin-top: 0.5rem;">0</strong>
+            </div>
+        </section>
+
+        <section class="dashboard-grid" style="padding:0; grid-template-columns: 1fr;">
+            <div class="card-panel">
+                <h2 class="panel-title" style="color: #f97316;">⚠️ Top 10 Clientes Críticos con Reclamos Pendientes</h2>
+                <div class="list-scroll-box" id="append-kpi-criticos" role="region" aria-live="polite" style="margin-top: 1rem;"></div>
+            </div>
+        </section>
+    </main>
+
+    <script type="module">
+        import { checkAuthGuard } from './js/utils/authGuard.js';
+        // Al estar en la raíz, el guardián verifica y redirige si no hay sesión activa
+        checkAuthGuard('pages/login.html');
+    </script>
+    
+    <script type="module" src="./js/controllers/indexController.js"></script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Martinez Routing - Control de Usuarios</title>
+    <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+
+    <header class="app-header">
+        <nav class="app-navbar" aria-label="Navegación de cuentas corporativas">
+            <div class="brand-title">Consola de Seguridad Operativa</div>
+            <div class="dashboard-counters">
+                <a href="../index.html" class="badge badge--info" style="text-decoration:none;">Inicio</a>
+                <a href="dashboard.html" class="badge badge--info" style="text-decoration:none;">Panel de Carga</a>
+                <a href="shipping.html" class="badge badge--info" style="text-decoration:none;">Consola Mapa</a>
+                <a href="transporte.html" class="badge badge--info" style="text-decoration:none;">Flota</a>
+                <a href="administracion.html" class="badge badge--info badge--active" style="text-decoration:none;">Seguridad</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="dashboard-grid" style="grid-template-columns: 1fr;">
+        <section class="card-panel" aria-labelledby="title-admin-usuarios">
+            <h2 id="title-admin-usuarios" class="panel-title">Permisos y Perfiles del Ecosistema</h2>
+            <p class="instruction-text">Los perfiles listados a continuación reflejan los permisos vigentes validados por las reglas perimetrales de Firestore.</p>
+            <div class="unidades-grid" id="usuarios-admin-append"></div>
+        </section>
+    </main>
+
+    <script type="module">
+        import { db } from '../js/services/firebaseConfig.js';
+        import { collection, onSnapshot } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+        const container = document.getElementById('usuarios-admin-append');
+
+        onSnapshot(collection(db, "usuarios"), (snapshot) => {
+            if(!container) return;
+            let html = "";
+            snapshot.forEach(docSnap => {
+                const user = docSnap.data();
+                html += `
+                    <article class="card-unidad" style="gap: 0.5rem;">
+                        <div class="card-unidad__header">
+                            <div class="card-unidad__id"><strong>${user.nombre}</strong></div>
+                            <span class="badge badge--info">${user.rol}</span>
+                        </div>
+                        <div class="card-unidad__body">
+                            <p style="margin:0;"><b>Email:</b> ${user.email}</p>
+                            <p style="margin:0;"><b>Estado:</b> ${user.activo ? '🟢 Autorizado' : '🔴 Suspendido'}</p>
+                        </div>
+                    </article>
+                `;
+            });
+            container.innerHTML = html;
+        });
+    </script>
+</body>
+</html>

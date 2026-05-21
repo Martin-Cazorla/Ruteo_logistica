@@ -1,0 +1,95 @@
+// scss/layout/_navbar.scss
+@use '../base/variables' as *;
+@use 'sass:color';
+
+.app-header {
+  background-color: $color-bg-card;
+  border-bottom: 1px solid $color-border;
+  min-height: 70px; // Permite que la barra crezca verticalmente si los botones se acomodan abajo
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 2rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.app-navbar {
+  display: flex;
+  flex-direction: column; // Distribución vertical por defecto en pantallas chicas
+  gap: 1rem;
+  align-items: center;
+  width: 100%;
+
+  // Disparador de maquetación horizontal para monitores y laptops de despacho
+  @media (min-width: 768px) {
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 0;
+  }
+
+  .brand-title {
+    color: $color-text-main;
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+
+  // Contenedor modular de enlaces de navegación (Píldoras accesibles)
+  .dashboard-counters {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap; // Evita el desborde forzando el salto de línea ordenado
+    justify-content: center;
+
+    a.badge {
+      transition: $transition-smooth;
+      border: 1px solid transparent;
+      padding: 0.5rem 0.85rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: $color-text-muted;
+      background-color: rgba($color-border, 0.3);
+
+      &:hover {
+        background-color: rgba($color-time-16-19, 0.25);
+        border-color: $color-time-16-19;
+        color: #ffffff;
+      }
+
+      // Estilo de resalte de página actual
+      &--active {
+        background-color: $color-time-16-19 !important;
+        color: #ffffff !important;
+        border-color: $color-time-16-19;
+        font-weight: 600;
+        box-shadow: 0 0 10px rgba($color-time-16-19, 0.4);
+      }
+    }
+  }
+}
+
+// Perfil de estado secundario del operador
+.user-profile-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: $color-text-muted;
+
+  .status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    
+    &--active {
+      background-color: $color-time-13-16; // Verde esmeralda
+      box-shadow: 0 0 8px $color-time-13-16;
+    }
+  }
+
+  .user-name {
+    color: $color-text-main;
+    font-weight: 500;
+  }
+}

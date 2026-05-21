@@ -1,0 +1,20 @@
+// scss/main.scss
+
+// 1. Configuraciones Globales de Base
+@use 'base/variables';
+@use 'base/reset';
+
+// 2. Estructuras de Maquetación (Layout)
+@use 'layout/grid';
+@use 'layout/navbar';
+
+// 3. Componentes UI Atómicos
+@use 'components/cards';
+@use 'components/filters';
+@use 'components/modals';
+
+// 4. Vistas y Páginas de la Aplicación
+@use 'pages/dashboard';
+@use 'pages/shipping';
+@use 'pages/transporte';
+@use 'pages/administracion'; // <--- CORREGIDO: Se agregó la 'r' faltante

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Martinez Routing - Panel de Carga Operativa</title>
+    <link rel="stylesheet" href="../css/main.css">
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+
+    <header class="app-header">
+        <nav class="app-navbar" aria-label="Navegación del sistema">
+            <div class="brand-title">Martinez Routing Dashboard</div>
+            <div class="dashboard-counters">
+                <a href="../index.html" class="badge badge--info" style="text-decoration:none;">Inicio</a>
+                <a href="dashboard.html" class="badge badge--info badge--active" style="text-decoration:none;">Panel de Carga</a>
+                <a href="shipping.html" class="badge badge--info" style="text-decoration:none;">Consola Mapa</a>
+                <a href="transporte.html" class="badge badge--info" style="text-decoration:none;">Flota</a>
+                <a href="administracion.html" class="badge badge--info" style="text-decoration:none;">Seguridad</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="dashboard-grid">
+        <section class="card-panel" aria-labelledby="title-import">
+            <h2 id="title-import" class="panel-title">Importador de Distribución (Planillas Jumbo)</h2>
+            <p class="instruction-text">Seleccione el archivo .xlsx o .csv descargado de la plataforma logística central para procesar las órdenes del día.</p>
+            <div class="upload-box">
+                <label Skinner for="excel-file" class="custom-file-upload">Seleccionar Archivo de Pedidos</label>
+                <input type="file" id="excel-file" accept=".xlsx, .xls, .csv" aria-required="true" />
+                <span id="file-name-display" aria-live="polite">Ningún archivo seleccionado</span>
+            </div>
+            <button id="btn-procesar-carga" class="btn-primary" disabled>Iniciar Inyección de Datos a Firestore</button>
+        </section>
+
+        <section class="card-panel" aria-labelledby="title-unidades">
+            <header class="section-header">
+                <h2 id="title-unidades" class="panel-title">Control de Unidades del Día</h2>
+                <div class="dashboard-counters" role="region" aria-live="polite">
+                    <span class="badge badge--info">Total: <strong id="count-total">0</strong></span>
+                    <span class="badge badge--success">Disponibles: <strong id="count-disp">0</strong></span>
+                    <span class="badge badge--danger">En Extra: <strong id="count-extra">0</strong></span>
+                </div>
+            </header>
+            <div id="unidades-grid" class="unidades-grid"></div>
+        </section>
+    </main>
+
+    <script type="module" src="../js/controllers/dashboardController.js"></script>
+</body>
+</html>

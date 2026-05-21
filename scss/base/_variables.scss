@@ -1,0 +1,20 @@
+// Paleta de Colores Operativos (Sin presencia de Amarillo)
+$color-bg-dark:     #0f172a; // Slate 900 (Fondo UI sofisticado)
+$color-bg-card:     #1e293b; // Slate 800
+$color-text-main:   #f8fafc; // Slate 50
+$color-text-muted:  #94a3b8; // Slate 400
+$color-border:      #334155; // Slate 700
+
+// Identificadores de Franjas Horarias Obligatorios
+$color-time-10-14:  #ef4444; // Rojo intenso (Urgente)
+$color-time-13-16:  #10b981; // Verde esmeralda
+$color-time-16-19:  #3b82f6; // Azul eléctrico (No se combina con amarillo)
+$color-time-19-215: #020617; // Negro / Slate 950
+
+// Estados y Alertas Críticas
+$color-danger-fire: #f97316; // Naranja fuego para Clientes Críticos
+$color-success:     #059669;
+
+// Tipografías y transiciones
+$font-main: 'Inter', system-ui, sans-serif;
+$transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);

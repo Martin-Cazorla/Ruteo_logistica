@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Martinez Routing - Gestión de Transporte</title>
+    <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+
+    <header class="app-header">
+        <nav class="app-navbar" aria-label="Navegación de transporte">
+            <div class="brand-title">Martinez Routing - Flota</div>
+            <div class="dashboard-counters">
+                <a href="../index.html" class="badge badge--info" style="text-decoration:none;">Inicio</a>
+                <a href="dashboard.html" class="badge badge--info" style="text-decoration:none;">Panel de Carga</a>
+                <a href="shipping.html" class="badge badge--info" style="text-decoration:none;">Consola Mapa</a>
+                <a href="transporte.html" class="badge badge--info badge--active" style="text-decoration:none;">Flota</a>
+                <a href="administracion.html" class="badge badge--info" style="text-decoration:none;">Seguridad</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="dashboard-grid">
+        <section class="card-panel" aria-labelledby="title-alta-transporte">
+            <h2 id="title-alta-transporte" class="panel-title">Alta de Unidades / Choferes</h2>
+            <form id="form-alta-unidad" class="filter-group" autocomplete="off">
+                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <label for="input-patente">Patente / ID Interno:</label>
+                    <input type="text" id="input-patente" class="select-field" placeholder="Ej: U-105 o AA123BB" required />
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem;">
+                    <label for="input-chofer">Nombre del Conductor:</label>
+                    <input type="text" id="input-chofer" class="select-field" placeholder="Nombre completo" required />
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem;">
+                    <label for="select-tamanio">Capacidad del Vehículo:</label>
+                    <select id="select-tamanio" class="select-field">
+                        <option value="Furgón Chico">Furgón Chico (1.5 Tn)</option>
+                        <option value="Furgón Mediano">Furgón Mediano (3.5 Tn)</option>
+                        <option value="Chasis Pesado">Chasis Pesado (5+ Tn)</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary" style="margin-top: 1.5rem;">Registrar en Flota Activa</button>
+            </form>
+        </section>
+
+        <section class="card-panel" aria-labelledby="title-lista-transporte">
+            <h2 id="title-lista-transporte" class="panel-title">Conductores Activos y Reclamos</h2>
+            <div id="transporte-maestro-append" class="unidades-grid"></div>
+        </section>
+    </main>
+
+    <script type="module">
+        import { db } from '../js/services/firebaseConfig.js';
+        import { collection, setDoc, doc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+        document.getElementById('form-alta-unidad').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const patente = document.getElementById('input-patente').value.trim().toUpperCase();
+            const chofer = document.getElementById('input-chofer').value.trim();
+            const tamanio = document.getElementById('select-tamanio').value;
+
+            if(!patente || !chofer) return;
+
+            try {
+                await setDoc(doc(db, "unidades", patente), {
+                    numeroUnidad: patente,
+                    chofer: chofer,
+                    tamanio: tamanio,
+                    ingreso: "10hs",
+                    vueltasRealizadas: 0,
+                    alertaCampo: false,
+                    estado: "disponible"
+                });
+                alert(`Unidad ${patente} dada de alta con éxito.`);
+                e.target.reset();
+            } catch (err) {
+                alert("Error al guardar transportista: " + err.message);
+            }
+        });
+    </script>
+</body>
+</html>

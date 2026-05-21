@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Martinez Routing - Módulo General de Asignación</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+    <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+
+    <header class="app-header">
+        <nav class="app-navbar" aria-label="Navegación principal de control">
+            <div class="brand-title">Martinez Routing v2.5</div>
+            <div class="dashboard-counters">
+                <a href="../index.html" class="badge badge--info" style="text-decoration:none;">Inicio</a>
+                <a href="dashboard.html" class="badge badge--info" style="text-decoration:none;">Panel de Carga</a>
+                <a href="shipping.html" class="badge badge--info badge--active" style="text-decoration:none;">Consola Mapa</a>
+                <a href="transporte.html" class="badge badge--info" style="text-decoration:none;">Flota</a>
+                <a href="administracion.html" class="badge badge--info" style="text-decoration:none;">Seguridad</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="shipping-container">
+        <section class="map-wrapper" aria-label="Mapa de Distribución Geográfica">
+            <div id="map"></div>
+        </section>
+
+        <aside class="control-sidebar" aria-label="Filtros y Control de Envíos">
+            <h2>Consola de Despacho</h2>
+            <div class="filter-group">
+                <label for="filter-franja">Filtrar Ventana de Distribución:</label>
+                <select id="filter-franja" class="select-field">
+                    <option value="all">Todas las Ventanas Operativas</option>
+                    <option value="10:00-14:00">Mañana (10:00 - 14:00) [Rojo]</option>
+                    <option value="13:00-16:00">Mediodía (13:00 - 16:00) [Verde]</option>
+                    <option value="16:00-19:00">Tarde (16:00 - 19:00) [Azul]</option>
+                    <option value="19:00-21:30">Nocturno (19:00 - 21:30) [Negro]</option>
+                </select>
+            </div>
+            <hr aria-hidden="true" style="border: 0; border-top: 1px solid #334155; margin: 0.5rem 0;">
+            <h3>Pedidos Disponibles</h3>
+            <div id="pedidos-list-append" class="list-scroll-box" role="region" aria-live="polite"></div>
+        </aside>
+    </main>
+
+    <script type="module">
+        import { checkAuthGuard } from '../js/utils/authGuard.js';
+        checkAuthGuard('login.html'); 
+    </script>
+    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    
+    <script type="module" src="js/controllers/shippingController.js"></script>
+</body>
+</html>

@@ -9,10 +9,11 @@
 @use 'layout/navbar';
 
 // 3. Componentes UI Atómicos
-@use 'components/cards';
 @use 'components/filters';
+@use 'components/tabs';
+@use 'components/forms';
 @use 'components/modals';
-
+@use 'components/cards';
 // 4. Vistas y Páginas de la Aplicación
 @use 'pages/dashboard';
 @use 'pages/shipping';

@@ -2,6 +2,10 @@
 @use 'sass:color';
 @use '../base/variables' as *;
 
+// ==========================================================================
+// 1. Cabeceras de Sección y Contadores (Estructura Base)
+// ==========================================================================
+
 .section-header {
   display: flex;
   flex-direction: column;
@@ -23,6 +27,10 @@
   flex-wrap: wrap;
 }
 
+// ==========================================================================
+// 2. Componentes de Etiquetas Dinámicas (Badges Logísticos)
+// ==========================================================================
+
 .badge {
   padding: 0.4rem 0.75rem;
   border-radius: 20px;
@@ -36,7 +44,6 @@
   &--info {
     background-color: rgba($color-time-16-19, 0.15);
     border: 1px solid rgba($color-time-16-19, 0.3);
-    // CORREGIDO: Ajustado al estándar nativo color.adjust
     color: color.adjust($color-time-16-19, $lightness: 15%);
   }
 
@@ -56,6 +63,52 @@
     font-weight: 700;
   }
 }
+
+// ==========================================================================
+// 3. NUEVO: Filtro Maestro de Jornada Operativa (Nivel Superior)
+// ==========================================================================
+
+.filter-bar {
+  background-color: $color-bg-card;
+  border-bottom: 1px solid $color-border;
+  padding: 1rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+
+  .filter-group {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    label {
+      color: $color-text-main;
+      font-size: 0.95rem;
+    }
+
+    // Input de tipo fecha adaptado a la estética oscura de Martinez Routing
+    input[type="date"] {
+      max-width: 200px;
+      background-color: $color-bg-dark;
+      color: $color-text-main;
+      border: 1px solid $color-border;
+      padding: 0.5rem;
+      border-radius: 6px;
+      outline: none;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: $transition-smooth;
+
+      &:focus {
+        border-color: $color-time-16-19;
+      }
+    }
+  }
+}
+
+// ==========================================================================
+// 4. Grillas de Contención Estructural
+// ==========================================================================
 
 .unidades-grid {
   display: grid;

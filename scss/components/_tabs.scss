@@ -1,0 +1,47 @@
+// scss/components/_tabs.scss
+@use '../base/variables' as *;
+
+.tab-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+
+  .tab-list {
+    display: flex;
+    border-bottom: 2px solid $color-border;
+    gap: 0.5rem;
+
+    .tab-btn {
+      background: none;
+      border: none;
+      color: $color-text-muted;
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: $transition-smooth;
+      border-radius: 6px 6px 0 0;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+
+      &:hover {
+        color: $color-text-main;
+        background-color: rgba($color-border, 0.2);
+      }
+
+      &.active {
+        color: $color-time-16-19; // Usamos tu color destacado de ventana
+        border-bottom: 2px solid $color-time-16-19;
+      }
+    }
+  }
+
+  .tab-panel {
+    display: none;
+    animation: fadeIn 0.25s ease-in-out;
+
+    &.active {
+      display: block;
+    }
+  }
+}

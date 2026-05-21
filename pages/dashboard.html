@@ -13,39 +13,234 @@
         <nav class="app-navbar" aria-label="Navegación del sistema">
             <div class="brand-title">Martinez Routing Dashboard</div>
             <div class="dashboard-counters">
-                <a href="../index.html" class="badge badge--info" style="text-decoration:none;">Inicio</a>
-                <a href="dashboard.html" class="badge badge--info badge--active" style="text-decoration:none;">Panel de Carga</a>
-                <a href="shipping.html" class="badge badge--info" style="text-decoration:none;">Consola Mapa</a>
-                <a href="transporte.html" class="badge badge--info" style="text-decoration:none;">Flota</a>
-                <a href="administracion.html" class="badge badge--info" style="text-decoration:none;">Seguridad</a>
+                <a href="../index.html" class="badge badge--info">Inicio</a>
+                <a href="dashboard.html" class="badge badge--info badge--active">Panel de Carga</a>
+                <a href="shipping.html" class="badge badge--info">Consola Mapa</a>
+                <a href="transporte.html" class="badge badge--info">Flota</a>
+                <a href="administracion.html" class="badge badge--info">Seguridad</a>
             </div>
         </nav>
     </header>
 
-    <main class="dashboard-grid">
-        <section class="card-panel" aria-labelledby="title-import">
-            <h2 id="title-import" class="panel-title">Importador de Distribución (Planillas Jumbo)</h2>
-            <p class="instruction-text">Seleccione el archivo .xlsx o .csv descargado de la plataforma logística central para procesar las órdenes del día.</p>
-            <div class="upload-box">
-                <label Skinner for="excel-file" class="custom-file-upload">Seleccionar Archivo de Pedidos</label>
-                <input type="file" id="excel-file" accept=".xlsx, .xls, .csv" aria-required="true" />
-                <span id="file-name-display" aria-live="polite">Ningún archivo seleccionado</span>
-            </div>
-            <button id="btn-procesar-carga" class="btn-primary" disabled>Iniciar Inyección de Datos a Firestore</button>
-        </section>
+    <div class="filter-bar" role="toolbar" aria-label="Filtro global de jornada">
+        <div class="filter-group">
+            <label for="global-date-filter"><strong>Jornada Operativa de Control:</strong></label>
+            <input type="date" id="global-date-filter" class="select-field" aria-required="true">
+        </div>
+    </div>
 
-        <section class="card-panel" aria-labelledby="title-unidades">
-            <header class="section-header">
-                <h2 id="title-unidades" class="panel-title">Control de Unidades del Día</h2>
-                <div class="dashboard-counters" role="region" aria-live="polite">
-                    <span class="badge badge--info">Total: <strong id="count-total">0</strong></span>
-                    <span class="badge badge--success">Disponibles: <strong id="count-disp">0</strong></span>
-                    <span class="badge badge--danger">En Extra: <strong id="count-extra">0</strong></span>
+    <main class="dashboard-container">
+        <div class="tab-container">
+            <div class="tab-list" role="tablist" aria-label="Secciones del panel de operaciones">
+                <button id="tab-unidades" class="tab-btn active" role="tab" aria-selected="true" aria-controls="panel-unidades">Control de Unidades</button>
+                <button id="tab-pedidos" class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-pedidos">Pedidos de la Jornada</button>
+                <button id="tab-clientes" class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-clientes">Base de Clientes</button>
+                <button id="tab-reclamos" class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-reclamos">Gestión de Reclamos</button>
+            </div>
+
+            <section id="panel-unidades" class="tab-panel active" role="tabpanel" aria-labelledby="tab-unidades">
+                <div class="panel-actions-header">
+                    <h2 class="panel-title">Monitoreo de Flota Activa</h2>
+                    <button id="btn-add-unidad-modal" class="btn-primary">+ Registrar Unidad para Hoy</button>
                 </div>
-            </header>
-            <div id="unidades-grid" class="unidades-grid"></div>
-        </section>
+                
+                <div class="dashboard-counters" role="region" aria-live="polite">
+                    <span class="badge badge--info">Unidades Activas: <strong id="count-total">0</strong></span>
+                    <span class="badge badge--success">En Vuelta: <strong id="count-disp">0</strong></span>
+                    <span class="badge badge--danger">En Horas Extra: <strong id="count-extra">0</strong></span>
+                </div>
+
+                <div id="unidades-grid" class="unidades-grid-cards">
+                    </div>
+            </section>
+
+            <section id="panel-pedidos" class="tab-panel" role="tabpanel" aria-labelledby="tab-pedidos" hidden>
+                <div class="grid-two-columns">
+                    <div class="card-panel">
+                        <h3 class="section-title">Inyección Masiva (Planillas Jumbo)</h3>
+                        <div class="upload-box">
+                            <label for="excel-file" class="custom-file-upload">📁 Seleccionar Archivo .xlsx / .csv</label>
+                            <input type="file" id="excel-file" accept=".xlsx, .xls, .csv" />
+                            <span id="file-name-display" aria-live="polite">Ningún archivo seleccionado</span>
+                        </div>
+                        <button id="btn-procesar-carga" class="btn-primary" disabled>Iniciar Inyección a Firestore</button>
+                        
+                        <hr class="separator" aria-hidden="true">
+                        
+                        <h3 class="section-title">Carga Manual Ajustada</h3>
+                        <button id="btn-manual-pedido-modal" class="btn-secondary">Apertura Formulario de Pedido</button>
+                    </div>
+
+                    <div class="card-panel">
+                        <h3 class="section-title">Órdenes del Día</h3>
+                        <div class="search-box">
+                            <input type="search" id="search-pedido" class="select-field" placeholder="Buscar por número de orden o DNI...">
+                        </div>
+                        <div id="listado-pedidos" class="list-scroll-box">
+                            </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="panel-clientes" class="tab-panel" role="tabpanel" aria-labelledby="tab-clientes" hidden>
+                <div class="grid-two-columns">
+                    <div class="card-panel">
+                        <h3 class="section-title">Alta de Cliente Nuevo</h3>
+                        <form id="form-cliente" class="form-vertical">
+                            <div class="form-group">
+                                <label for="c-dni">DNI / Identificación:</label>
+                                <input type="text" id="c-dni" class="select-field" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="c-nombre">Nombre y Apellido:</label>
+                                <input type="text" id="c-nombre" class="select-field" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="c-telefono">Teléfono de Contacto:</label>
+                                <input type="tel" id="c-telefono" class="select-field" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="c-mail">Correo Electrónico:</label>
+                                <input type="email" id="c-mail" class="select-field" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="c-direccion">Dirección Principal:</label>
+                                <input type="text" id="c-direccion" class="select-field" placeholder="Calle, Altura, Localidad" required>
+                            </div>
+                            <button type="submit" class="btn-primary">Guardar Cliente en Base Global</button>
+                        </form>
+                    </div>
+                    <div class="card-panel">
+                        <h3 class="section-title">Fichero de Clientes Registrados</h3>
+                        <input type="search" id="search-cliente" class="select-field" placeholder="Filtrar por DNI o Apellido...">
+                        <div id="listado-clientes" class="list-scroll-box"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="panel-reclamos" class="tab-panel" role="tabpanel" aria-labelledby="tab-reclamos" hidden>
+                <div class="grid-two-columns">
+                    <div class="card-panel">
+                        <h3 class="section-title">Ingreso de Reclamo Operativo</h3>
+                        <form id="form-reclamo" class="form-vertical">
+                            <div class="form-group">
+                                <label for="rec-dni">DNI del Cliente afectado:</label>
+                                <input type="text" id="rec-dni" class="select-field" placeholder="Presione Enter para buscar..." required>
+                                <span id="rec-cliente-status" class="status-indicator" aria-live="polite"></span>
+                            </div>
+                            <div class="form-group">
+                                <label for="rec-direccion">Seleccionar Dirección del Incidente:</label>
+                                <select id="rec-direccion" class="select-field" required disabled>
+                                    <option value="">Ingrese primero un DNI válido</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="rec-descripcion">Descripción del Problema (Alerta Fuego):</label>
+                                <textarea id="rec-descripcion" class="select-field" rows="4" placeholder="Detalle el motivo del reclamo..." required></textarea>
+                            </div>
+                            <button type="submit" class="btn-danger">Cargar Reclamo y Activar Alerta Crítica</button>
+                        </form>
+                    </div>
+                    <div class="card-panel">
+                        <h3 class="section-title">Historial de Alertas Activas</h3>
+                        <div id="listado-reclamos" class="list-scroll-box"></div>
+                    </div>
+                </div>
+            </section>
+        </div>
     </main>
+
+    <div id="modal-pedido" class="modal-overlay" aria-hidden="true" role="dialog">
+        <div class="modal-content">
+            <header class="modal-header">
+                <h3>Formulario de Creación de Orden</h3>
+                <button class="btn-close-modal" aria-label="Cerrar ventana">&times;</button>
+            </header>
+            <form id="form-manual-pedido" class="form-vertical">
+                <div class="form-group">
+                    <label for="p-dni">DNI del Cliente:</label>
+                    <input type="text" id="p-dni" class="select-field" placeholder="Buscar cliente..." required>
+                    <button type="button" id="btn-verificar-dni" class="btn-secondary">Validar DNI</button>
+                </div>
+                <div id="domicilios-select-group" class="form-group" style="display:none;">
+                    <label for="p-direccion-select">Seleccionar Domicilio Registrado:</label>
+                    <select id="p-direccion-select" class="select-field"></select>
+                </div>
+                <div id="domicilio-nuevo-group" class="form-group">
+                    <label for="p-direccion-nueva">Dirección de Entrega (Nueva / Única):</label>
+                    <input type="text" id="p-direccion-nueva" class="select-field" placeholder="Calle, Altura, Localidad">
+                </div>
+                <div class="grid-form-row">
+                    <div class="form-group">
+                        <label for="p-numero">Nº Pedido (Jumbo):</label>
+                        <input type="text" id="p-numero" class="select-field" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="p-importe">Importe ($):</label>
+                        <input type="number" id="p-importe" step="0.01" class="select-field" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="p-franja">Ventana Horaria Asignada:</label>
+                    <select id="p-franja" class="select-field" required>
+                        <option value="10:00-14:00">Mañana (10:00 - 14:00)</option>
+                        <option value="13:00-16:00">Mediodía (13:00 - 16:00)</option>
+                        <option value="16:00-19:00">Tarde (16:00 - 19:00)</option>
+                        <option value="19:00-21:30">Nocturno (19:00 - 21:30)</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary w-100">Inyectar Pedido Manual</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-unidad" class="modal-overlay" aria-hidden="true" role="dialog">
+        <div class="modal-content">
+            <header class="modal-header">
+                <h3>Asignación de Unidad para la Jornada</h3>
+                <button class="btn-close-modal" aria-label="Cerrar ventana">&times;</button>
+            </header>
+            <form id="form-alta-unidad" class="form-vertical">
+                <div class="form-group">
+                    <label for="u-nombre">Identificador de la Unidad (Chofer / Patente):</label>
+                    <input type="text" id="u-nombre" class="select-field" placeholder="Ej: Interno 14 - Carlos" required>
+                </div>
+                <div class="form-group">
+                    <label for="u-ingreso">Horario de Ingreso por planilla:</label>
+                    <input type="time" id="u-ingreso" class="select-field" required>
+                </div>
+                <div class="grid-form-row">
+                    <div class="form-group">
+                        <label for="u-salida">Vuelta de Salida:</label>
+                        <select id="u-salida" class="select-field">
+                            <option value="10">Vuelta 10:00 hs</option>
+                            <option value="13">Vuelta 13:00 hs</option>
+                            <option value="16">Vuelta 16:00 hs</option>
+                            <option value="19">Vuelta 19:00 hs</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="u-vueltas">Cantidad de Vueltas:</label>
+                        <select id="u-vueltas" class="select-field">
+                            <option value="1">1 Vuelta</option>
+                            <option value="2">2 Vueltas</option>
+                            <option value="3">3 Vueltas (Máx Estándar)</option>
+                            <option value="4">4 Vueltas (Horas Extra)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group checkbox-row">
+                    <input type="checkbox" id="u-campo">
+                    <label for="u-campo">¿Realizó entrega en campo el día de hoy? (Máx 1 vez/día)</label>
+                </div>
+                <div class="form-group">
+                    <label for="u-notas">Notas y Comentarios Operativos:</label>
+                    <textarea id="u-notas" class="select-field" placeholder="Novedades mecánicas, demoras, etc..."></textarea>
+                </div>
+                <button type="submit" class="btn-primary w-100">Dar de Alta Unidad</button>
+            </form>
+        </div>
+    </div>
 
     <script type="module" src="../js/controllers/dashboardController.js"></script>
 </body>

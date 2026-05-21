@@ -1,107 +1,38 @@
 // scss/pages/_dashboard.scss
-@use 'sass:color';
 @use '../base/variables' as *;
 
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 2rem;
+.dashboard-container {
   padding: 2rem;
   background-color: $color-bg-dark;
-  min-height: calc(100vh - 70px);
-
-  // Adaptación de grilla responsiva avanzada para monitores de despacho logístico
-  @media (min-width: 1024px) {
-    grid-template-columns: 400px 1fr;
-  }
+  min-height: calc(100vh - 140px);
 }
 
-.card-panel {
-  background-color: $color-bg-card;
-  border: 1px solid $color-border;
-  border-radius: 12px;
-  padding: 1.5rem;
+.panel-actions-header {
   display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
 
   .panel-title {
     color: $color-text-main;
-    font-size: 1.35rem;
-    font-weight: 600;
     margin: 0;
   }
+}
 
-  .instruction-text {
-    color: $color-text-muted;
-    font-size: 0.9rem;
-    line-height: 1.5;
+// Grillas de distribución asimétrica (Layout)
+.grid-two-columns {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+
+  @media (min-width: 1024px) {
+    grid-template-columns: 450px 1fr;
   }
 }
 
-.upload-box {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  align-items: flex-start;
-
-  input[type="file"] {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    border: 0;
-  }
-
-  .custom-file-upload {
-    background-color: transparent;
-    color: $color-text-main;
-    border: 1px dashed $color-border;
-    padding: 1rem;
-    border-radius: 6px;
-    cursor: pointer;
-    width: 100%;
-    text-align: center;
-    font-weight: 500;
-    transition: $transition-smooth;
-
-    &:hover {
-      border-color: $color-time-16-19;
-      background-color: rgba($color-time-16-19, 0.05);
-    }
-  }
-
-  #file-name-display {
-    font-size: 0.85rem;
-    color: $color-time-13-16;
-    font-weight: 500;
-  }
-}
-
-.btn-primary {
-  background-color: $color-time-16-19; // Azul eléctrico corporativo
-  color: #ffffff;
-  border: none;
-  padding: 0.85rem 1.5rem;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: $transition-smooth;
-  width: 100%;
-
-  &:hover:not(:disabled) {
-    // CORREGIDO: Se reemplazó el uso de'darken()' por color.adjust con un valor negativo
-    background-color: color.adjust($color-time-16-19, $lightness: -10%);
-  }
-
-  &:disabled {
-    background-color: $color-border;
-    color: $color-text-muted;
-    cursor: not-allowed;
-    opacity: 0.6;
-  }
+.unidades-grid-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
 }

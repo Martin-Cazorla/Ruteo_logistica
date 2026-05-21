@@ -51,6 +51,13 @@ export class MapModule {
         this.currentMarkers.clear();
 
         pedidos.forEach(pedido => {
+            // BLINDAJE CRÍTICO: Verificamos de forma estricta que el pedido tenga coordenadas geográficas válidas
+            // Si no tiene lat o lng, ignoramos el pedido para evitar el error TypeError que rompe el mapa
+            if (!pedido.coordenadas || typeof pedido.coordenadas.lat === 'undefined' || typeof pedido.coordenadas.lng === 'undefined') {
+                console.warn(`⚠️ OMITIENDO PEDIDO SIN COORDENADAS: Orden #${pedido.numeroPedido} (ID: ${pedido.id}) no posee latitud/longitud válida en la base de datos.`);
+                return; // Saltamos a la siguiente iteración del forEach
+            }
+
             const colorClass = this._getColorByFranja(pedido.franjaHoraria);
             let markerOptions = {};
 
@@ -64,6 +71,7 @@ export class MapModule {
                 markerOptions = { icon: fireIcon };
             }
 
+            // Ahora es seguro leer .lat y .lng porque ya verificamos que existen
             const marker = L.marker([pedido.coordenadas.lat, pedido.coordenadas.lng], markerOptions);
             
             const safeMotivo = Sanitizer.escapeHTML(pedido.motivoCritico || 'Sin reclamos pendientes');

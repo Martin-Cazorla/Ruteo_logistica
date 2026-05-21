@@ -2,18 +2,12 @@
 import Sanitizer from '../utils/sanitizers.js';
 
 export class MapModule {
-    /**
-     * @param {string} mapElementId 
-     * @param {Function} onSelectionCallback Ejecutado al seleccionar múltiples pedidos en mapa
-     */
     constructor(mapElementId, onSelectionCallback) {
-        // Inicializamos el mapa centrado en Buenos Aires
         this.map = L.map(mapElementId).setView([-34.6037, -58.3816], 12);
         this.markerCluster = L.markerClusterGroup();
         this.onSelection = onSelectionCallback;
         this.currentMarkers = new Map();
 
-        // Enrutamiento global de los pines por CDN para máxima compatibilidad en producción
         delete L.Icon.Default.prototype._getIconUrl;
         L.Icon.Default.mergeOptions({
             iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -25,32 +19,20 @@ export class MapModule {
     }
 
     _initTileLayer() {
-        // CORREGIDO: Migramos al servidor estándar y abierto de OpenStreetMap (OSM)
-        // Este servidor es 100% público y libre de bloqueos de red local o restricciones de dominio
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         }).addTo(this.map);
         
         this.map.addLayer(this.markerCluster);
-
-        // Forzamos el redibujo del contenedor para calcular el layout real del DOM
-        setTimeout(() => {
-            this.map.invalidateSize();
-        }, 300);
     }
 
-    /**
-     * Renderiza o actualiza marcadores de forma masiva
-     * @param {Array} pedidos 
-     */
     updateMarkers(pedidos) {
         this.markerCluster.clearLayers();
         this.currentMarkers.clear();
 
         pedidos.forEach(pedido => {
-            if (!pedido || !pedido.coordenadas || typeof pedido.coordenadas.lat === 'undefined' || typeof pedido.coordenadas.lng === 'undefined' || pedido.coordenadas.lat === null) {
-                console.warn(`⚠️ OMITIENDO PEDIDO: Orden #${pedido?.numeroPedido || 'Desconocida'} no posee geolocalización.`);
+            if (!pedido || !pedido.coordenadas || typeof pedido.coordenadas.lat === 'undefined' || typeof pedido.coordenadas.lng === 'undefined' || !pedido.coordenadas.lat) {
                 return;
             }
 

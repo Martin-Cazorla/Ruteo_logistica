@@ -69,6 +69,20 @@
         </div>
     </main>
 
+    <div id="modal-historial-reclamos" class="modal-overlay" aria-hidden="true" role="dialog">
+        <div class="modal-content">
+            <header class="modal-header">
+                <h3>Historial de Novedades - Interno #<span id="modal-interno-titulo">00</span></h3>
+                <button class="btn-close-modal" id="btn-cerrar-modal-reclamos" aria-label="Cerrar ventana">&times;</button>
+            </header>
+            <div class="card-panel">
+                <p class="instruction-text">Registro acumulado de alertas mecánicas y comentarios reportados por los despachadores:</p>
+                <div id="modal-listado-novedades" class="list-scroll-box" style="max-height: 300px; overflow-y: auto;">
+                    </div>
+            </div>
+        </div>
+    </div>
+    
     <script type="module" src="../js/controllers/transporteController.js"></script>
 </body>
 </html>

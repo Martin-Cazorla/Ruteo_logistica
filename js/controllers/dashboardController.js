@@ -11,7 +11,9 @@ import {
     addDoc, 
     doc, 
     deleteDoc,
-    getDocs
+    getDocs,
+    updateDoc,
+    arrayUnion
 } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
 export class DashboardController {
@@ -323,16 +325,15 @@ export class DashboardController {
     }
 
     setupFormSubmissions() {
-        // Alta operativa de unidades diarias cruzando datos con el Fichero Maestro de Flota
         if (this.formAltaUnidad) {
             this.formAltaUnidad.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 
                 const internoIngresado = document.getElementById('u-nombre').value.trim();
                 const fechaActualBarra = this.globalDateFilter.value;
+                const notasDiarias = document.getElementById('u-notas').value.trim();
 
                 try {
-                    // Consultamos de forma asíncrona la colección maestra de transporte
                     const maestroSnap = await getDocs(query(collection(db, "flota_maestra")));
                     
                     let datosMaestros = null;
@@ -340,13 +341,11 @@ export class DashboardController {
                         if (docSnap.id === internoIngresado) datosMaestros = docSnap.data();
                     });
 
-                    // Si el interno no existe en el registro permanente de transporte, frena la operación
                     if (!datosMaestros) {
                         alert(`❌ El Interno #${internoIngresado} no existe en el Fichero Maestro. Registre el camión primero en la pestaña de Flota.`);
                         return;
                     }
 
-                    // Cruzamos los datos fijos del maestro (chofer, modelo, tamaño) con las variables de la jornada activa
                     const dataOperativa = {
                         interno: internoIngresado,
                         chofer: datosMaestros.chofer,
@@ -356,19 +355,30 @@ export class DashboardController {
                         salida: document.getElementById('u-salida').value,
                         vueltas: document.getElementById('u-vueltas').value,
                         entregaCampo: document.getElementById('u-campo').checked,
-                        notas: document.getElementById('u-notas').value.trim(),
+                        notas: notasDiarias,
                         fecha: fechaActualBarra
                     };
 
-                    // Guardamos la instancia en la planilla del día
+                    // 1. Guardamos la instancia en la planilla operativa diaria
                     await addDoc(collection(db, "unidades"), dataOperativa);
                     
+                    // 2. MODIFICADO SENIOR: Si se reportaron notas o roturas, las apilamos en el array histórico del maestro
+                    if (notasDiarias) {
+                        const maestroDocRef = doc(db, "flota_maestra", internoIngresado);
+                        const registroNovedad = `[Jornada ${fechaActualBarra}]: ${notasDiarias}`;
+                        
+                        await updateDoc(maestroDocRef, {
+                            historial_novedades: arrayUnion(registroNovedad)
+                        });
+                    }
+
                     this.formAltaUnidad.reset();
                     this.toggleModal(this.modalUnidad, false);
-                    alert(`✅ Unidad #${internoIngresado} inyectada con éxito a la planilla operativa de hoy.`);
+                    alert(`✅ Unidad #${internoIngresado} asignada a la jornada. Historial central actualizado.`);
 
                 } catch (err) {
                     console.error("Fallo crítico en el cruce relacional: ", err);
+                    alert("Error al procesar la asignación de la unidad.");
                 }
             });
         }

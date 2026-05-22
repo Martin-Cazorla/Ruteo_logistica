@@ -426,6 +426,217 @@
   display: block;
 }
 
+.search-express-bar {
+  margin-bottom: 1.5rem;
+  padding: 1.25rem;
+  background-color: #1e293b;
+  border-left: 4px solid #06b6d4;
+}
+.search-express-bar .express-inputs-group {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+}
+.search-express-bar .express-inputs-group input[type=text] {
+  flex: 1;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  border-color: rgba(6, 182, 212, 0.3);
+}
+.search-express-bar .express-inputs-group input[type=text]:focus {
+  border-color: #06b6d4;
+  box-shadow: 0 0 8px rgba(6, 182, 212, 0.2);
+}
+.search-express-bar .express-inputs-group select {
+  width: 220px;
+  cursor: pointer;
+}
+
+.form-vertical-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.bloque-horario-jornada {
+  border-bottom: 1px solid rgba(51, 65, 85, 0.4);
+  padding-bottom: 1.5rem;
+}
+.bloque-horario-jornada .horario-header-title {
+  background-color: #1e293b;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  color: #38bdf8;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 1.25rem;
+  letter-spacing: 0.5px;
+}
+
+.horario-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.25rem;
+}
+
+.card-unidad-tactica {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 220px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.card-unidad-tactica.card-panel--critica {
+  border: 2px solid #ef4444;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.25);
+}
+.card-unidad-tactica .card-unidad-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+.card-unidad-tactica .card-unidad-header .card-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.card-unidad-tactica .card-unidad-header .card-header-left .card-interno-display {
+  font-size: 1.4rem;
+  color: #f8fafc;
+  font-weight: 800;
+}
+.card-unidad-tactica .card-unidad-header .btn-remover-unidad-jornada {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 1.5rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  transition: color 0.2s;
+}
+.card-unidad-tactica .card-unidad-header .btn-remover-unidad-jornada:hover {
+  color: #ef4444;
+}
+.card-unidad-tactica .card-unidad-info {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin-bottom: 1rem;
+  line-height: 1.4;
+}
+.card-unidad-tactica .card-unidad-info .driver-title {
+  color: #f8fafc;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.card-unidad-tactica .card-unidad-info .cap-title {
+  font-size: 0.8rem;
+}
+.card-unidad-tactica .card-unidad-info .model-title {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+.card-unidad-tactica .grid-vueltas-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+.card-unidad-tactica .grid-vueltas-buttons button.btn-toggle-vuelta {
+  font-size: 0.8rem;
+  padding: 0.4rem;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.card-unidad-tactica .grid-vueltas-buttons button.btn-toggle-vuelta.btn-vuelta-apagada {
+  background-color: #334155;
+  color: #94a3b8;
+}
+.card-unidad-tactica .grid-vueltas-buttons button.btn-toggle-vuelta.btn-vuelta-apagada:hover {
+  background-color: #475569;
+  color: #ffffff;
+}
+.card-unidad-tactica .grid-vueltas-buttons button.btn-toggle-vuelta.btn-vuelta-activa {
+  background-color: #22c55e;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(34, 197, 94, 0.3);
+}
+.card-unidad-tactica .vueltas-counter-display {
+  text-align: center;
+  font-weight: 800;
+  font-size: 1.15rem;
+  color: #f8fafc;
+  margin-bottom: 0.75rem;
+}
+.card-unidad-tactica .vueltas-counter-display .label-extra-sub {
+  display: block;
+  color: #ef4444;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.75px;
+  margin-top: 0.25rem;
+}
+.card-unidad-tactica .card-unidad-footer-notes {
+  font-size: 0.75rem;
+  color: #eab308;
+  border-top: 1px solid rgba(51, 65, 85, 0.4);
+  padding-top: 0.5rem;
+  margin-top: auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.card-unidad-tactica .card-unidad-footer-notes:hover {
+  color: #fde047;
+}
+
+.manual-order-item-row {
+  margin-bottom: 0.75rem;
+  padding: 1rem;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+.manual-order-item-row .sub-text-dni {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.card-panel--danger-alert {
+  border-left: 3px solid #ef4444;
+  margin-bottom: 0.75rem;
+  padding: 1rem;
+}
+.card-panel--danger-alert .alert-reason-text {
+  font-size: 0.85rem;
+  color: #ef4444;
+}
+
+.placeholder-vacio-jornada {
+  color: #64748b;
+  padding: 2.5rem;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.search-input-inline {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.grid-form-row-two-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
 .grid-two-columns {
   display: grid;
   grid-template-columns: 1fr;
@@ -436,43 +647,6 @@
   .grid-two-columns {
     grid-template-columns: 450px 1fr;
   }
-}
-
-.unidades-grid-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
-  margin-top: 1.5rem;
-}
-
-.upload-box {
-  border: 2px dashed #334155;
-  background-color: rgba(15, 23, 42, 0.4);
-  padding: 2rem;
-  text-align: center;
-  border-radius: 8px;
-  margin-bottom: 1rem;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.upload-box:hover {
-  border-color: #3b82f6;
-}
-.upload-box input[type=file] {
-  display: none;
-}
-.upload-box .custom-file-upload {
-  display: inline-block;
-  color: #f8fafc;
-  font-weight: 600;
-  cursor: pointer;
-  font-size: 0.95rem;
-}
-.upload-box #file-name-display {
-  display: block;
-  margin-top: 0.75rem;
-  font-size: 0.85rem;
-  color: #94a3b8;
-  font-style: italic;
 }
 
 .shipping-container {

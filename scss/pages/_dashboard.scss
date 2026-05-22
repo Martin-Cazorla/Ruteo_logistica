@@ -21,7 +21,7 @@
   }
 }
 
-// Barra superior de control de jornadas operativas
+// Barra superior fija de fecha operativa de control
 .filter-bar {
   background-color: $color-bg-card;
   border-bottom: 1px solid $color-border;
@@ -47,7 +47,7 @@
   }
 }
 
-// Arquitectura del Tab-System (Botones de Pestañas)
+// Control de Solapas (Tab System)
 .tab-list {
   display: flex;
   gap: 0.5rem;
@@ -88,7 +88,245 @@
   }
 }
 
-// Grillas de distribución asimétrica (Layout)
+// BARRA EXPRESS DE ALTA VELOCIDAD (Estilos Midados del Viejo Dashboard)
+.search-express-bar {
+  margin-bottom: 1.5rem;
+  padding: 1.25rem;
+  background-color: $color-bg-card;
+  border-left: 4px solid #06b6d4;
+
+  .express-inputs-group {
+    display: flex;
+    gap: 1rem;
+    width: 100%;
+
+    input[type="text"] {
+      flex: 1;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      border-color: rgba(#06b6d4, 0.3);
+
+      &:focus {
+        border-color: #06b6d4;
+        box-shadow: 0 0 8px rgba(6, 182, 212, 0.2);
+      }
+    }
+
+    select {
+      width: 220px;
+      cursor: pointer;
+    }
+  }
+}
+
+// CARRILES HORARIOS DEL GRID MAESTRO (image_40dfca.png)
+.form-vertical-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.bloque-horario-jornada {
+  border-bottom: 1px solid rgba($color-border, 0.4);
+  padding-bottom: 1.5rem;
+
+  .horario-header-title {
+    background-color: #1e293b;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    color: #38bdf8;
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 1.25rem;
+    letter-spacing: 0.5px;
+  }
+}
+
+.horario-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.25rem;
+}
+
+// ARQUITECTURA INDEPENDIENTE DE LA TARJETA TÁCTIL (MUDADO DESDE EL HTML)
+.card-unidad-tactica {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 220px;
+  transition: $transition-smooth;
+
+  // Alerta perimetral automática si arrastra reclamos mecánicos maestros
+  &.card-panel--critica {
+    border: 2px solid #ef4444;
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.25);
+  }
+
+  .card-unidad-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+
+    .card-header-left {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+
+      .card-interno-display {
+        font-size: 1.4rem;
+        color: #f8fafc;
+        font-weight: 800;
+      }
+    }
+
+    .btn-remover-unidad-jornada {
+      background: none;
+      border: none;
+      color: #64748b;
+      font-size: 1.5rem;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0;
+      transition: color 0.2s;
+
+      &:hover {
+        color: #ef4444;
+      }
+    }
+  }
+
+  .card-unidad-info {
+    font-size: 0.85rem;
+    color: $color-text-muted;
+    margin-bottom: 1rem;
+    line-height: 1.4;
+
+    .driver-title {
+      color: $color-text-main;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+    .cap-title {
+      font-size: 0.8rem;
+    }
+    .model-title {
+      font-size: 0.8rem;
+      color: #64748b;
+    }
+  }
+
+  // Distribución táctica de botones de vueltas
+  .grid-vueltas-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.35rem;
+    margin-bottom: 1rem;
+
+    button.btn-toggle-vuelta {
+      font-size: 0.8rem;
+      padding: 0.4rem;
+      font-weight: 600;
+      border-radius: 4px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: $transition-smooth;
+
+      &.btn-vuelta-apagada {
+        background-color: #334155;
+        color: #94a3b8;
+        &:hover {
+          background-color: #475569;
+          color: #ffffff;
+        }
+      }
+
+      &.btn-vuelta-activa {
+        background-color: #22c55e;
+        color: #ffffff;
+        box-shadow: 0 2px 6px rgba(34, 197, 94, 0.3);
+      }
+    }
+  }
+
+  .vueltas-counter-display {
+    text-align: center;
+    font-weight: 800;
+    font-size: 1.15rem;
+    color: #f8fafc;
+    margin-bottom: 0.75rem;
+
+    .label-extra-sub {
+      display: block;
+      color: #ef4444;
+      font-size: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 0.75px;
+      margin-top: 0.25rem;
+    }
+  }
+
+  .card-unidad-footer-notes {
+    font-size: 0.75rem;
+    color: #eab308;
+    border-top: 1px solid rgba($color-border, 0.4);
+    padding-top: 0.5rem;
+    margin-top: auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    &:hover {
+      color: #fde047;
+    }
+  }
+}
+
+// Clases utilitarias adicionales para pedidos y reclamos
+.manual-order-item-row {
+  margin-bottom: 0.75rem;
+  padding: 1rem;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+
+  .sub-text-dni {
+    font-size: 0.85rem;
+    color: #64748b;
+  }
+}
+
+.card-panel--danger-alert {
+  border-left: 3px solid #ef4444;
+  margin-bottom: 0.75rem;
+  padding: 1rem;
+
+  .alert-reason-text {
+    font-size: 0.85rem;
+    color: #ef4444;
+  }
+}
+
+.placeholder-vacio-jornada {
+  color: #64748b;
+  padding: 2.5rem;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+// Inyección y filas de modal manual
+.search-input-inline {
+  display: flex;
+  gap: 0.5rem;
+}
+.grid-form-row-two-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
 .grid-two-columns {
   display: grid;
   grid-template-columns: 1fr;
@@ -97,47 +335,5 @@
 
   @media (min-width: 1024px) {
     grid-template-columns: 450px 1fr;
-  }
-}
-
-.unidades-grid-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
-  margin-top: 1.5rem;
-}
-
-// Módulo específico para carga de planillas excel de Jumbo
-.upload-box {
-  border: 2px dashed $color-border;
-  background-color: rgba($color-bg-dark, 0.4);
-  padding: 2rem;
-  text-align: center;
-  border-radius: 8px;
-  margin-bottom: 1rem;
-  transition: $transition-smooth;
-
-  &:hover {
-    border-color: $color-time-16-19;
-  }
-
-  input[type="file"] {
-    display: none;
-  }
-
-  .custom-file-upload {
-    display: inline-block;
-    color: $color-text-main;
-    font-weight: 600;
-    cursor: pointer;
-    font-size: 0.95rem;
-  }
-
-  #file-name-display {
-    display: block;
-    margin-top: 0.75rem;
-    font-size: 0.85rem;
-    color: $color-text-muted;
-    font-style: italic;
   }
 }

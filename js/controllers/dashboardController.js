@@ -18,9 +18,12 @@ import {
 export class DashboardController {
     constructor() {
         this.globalDateFilter = document.getElementById('global-date-filter');
-        // Nuevo contenedor de bloques de image_40dfca.png
         this.unidadesSeccionesContainer = document.getElementById('unidades-secciones-container');
         
+        // Inputs express integrados de tu otro proyecto para despacho rápido
+        this.inputExpressUnidad = document.getElementById('input-express-unidad');
+        this.selectExpressIngreso = document.getElementById('select-express-ingreso');
+
         this.countTotal = document.getElementById('count-total');
         this.countDisp = document.getElementById('count-disp');
         this.countExtra = document.getElementById('count-extra');
@@ -38,9 +41,7 @@ export class DashboardController {
         this.listadoReclamosContainer = document.getElementById('listado-reclamos');
 
         this.modalPedido = document.getElementById('modal-pedido');
-        this.modalUnidad = document.getElementById('modal-unidad');
         this.formManualPedido = document.getElementById('form-manual-pedido');
-        this.formAltaUnidad = document.getElementById('form-alta-unidad');
         this.pDniInput = document.getElementById('p-dni');
         this.pDireccionSelect = document.getElementById('p-direccion-select');
         this.pDireccionSelectGroup = document.getElementById('domicilios-select-group');
@@ -50,7 +51,6 @@ export class DashboardController {
         this.unsubscribePedidos = null;
         this.unsubscribeReclamos = null;
         
-        // Franjas de control estables especificadas por la operación
         this.franjasHorariasValidas = ["09:00 hs", "10:00 hs", "11:00 hs", "Electro", "Ausente"];
     }
 
@@ -63,7 +63,7 @@ export class DashboardController {
         this.setupTabsBehavior();
         this.setupModalToggles();
         this.setupExcelEventListeners();
-        this.setupFormSubmissions();
+        this.setupExpressDispatchListener(); // Vinculación express por Enter
         this.setupDniCrossSearching();
 
         this.sincronizarTodaLaJornada();
@@ -109,11 +109,9 @@ export class DashboardController {
     }
 
     setupModalToggles() {
-        const btnOpenUnidad = document.getElementById('btn-add-unidad-modal');
         const btnOpenPedido = document.getElementById('btn-manual-pedido-modal');
         const closeButtons = document.querySelectorAll('.btn-close-modal');
 
-        if (btnOpenUnidad) btnOpenUnidad.addEventListener('click', () => this.toggleModal(this.modalUnidad, true));
         if (btnOpenPedido) btnOpenPedido.addEventListener('click', () => this.toggleModal(this.modalPedido, true));
 
         closeButtons.forEach(btn => {
@@ -143,7 +141,6 @@ export class DashboardController {
         this.unsubscribeUnidades = onSnapshot(q, (snapshot) => {
             let total = 0, enVuelta = 0, enExtra = 0;
             
-            // Agrupamos las unidades por su franja horaria de ingreso en caliente
             const mapaGrupos = {
                 "09:00 hs": [],
                 "10:00 hs": [],
@@ -157,13 +154,11 @@ export class DashboardController {
                 const id = docSnap.id;
                 total++;
 
-                // Mapeo adaptativo de vueltas activas
                 const v10 = !!u.v10;
                 const v13 = !!u.v13;
                 const v16 = !!u.v16;
                 const v19 = !!u.v19;
 
-                // Sumamos la cantidad de vueltas seleccionadas en los botones táctiles
                 const qVueltasTotales = [v10, v13, v16, v19].filter(Boolean).length;
 
                 if (qVueltasTotales >= 4) enExtra++;
@@ -179,67 +174,61 @@ export class DashboardController {
                 }
             });
 
-            // Dibujamos las cabeceras horizontales de image_40dfca.png
             let htmlMaestro = "";
             this.franjasHorariasValidas.forEach(franja => {
                 const listaUnidades = mapaGrupos[franja];
-                if (listaUnidades.length === 0) return; // Omitimos bloques vacíos para ahorrar scroll
+                if (listaUnidades.length === 0) return;
 
+                // CORREGIDO: Eliminación de estilos en línea del mapeador HTML
                 htmlMaestro += `
-                    <div class="bloque-horario-jornada" style="margin-bottom: 1.5rem;">
-                        <h3 class="section-title" style="background-color: #1e293b; padding: 0.5rem 1rem; border-radius: 4px; color: #38bdf8; font-size: 1rem; text-transform: uppercase; margin-bottom: 1rem;">
-                            ⚠️ INGRESO ${franja}
+                    <div class="bloque-horario-jornada">
+                        <h3 class="horario-header-title">
+                            INGRESO ${franja}
                         </h3>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem;">
+                        <div class="horario-cards-grid">
                             ${listaUnidades.map(u => {
                                 const intSeguro = Sanitizer.escapeHTML(u.interno);
                                 const choSeguro = Sanitizer.escapeHTML(u.chofer);
                                 const modSeguro = Sanitizer.escapeHTML(u.modelo);
                                 const tamSeguro = Sanitizer.escapeHTML(u.tamanio);
-                                const notaSegura = Sanitizer.escapeHTML(u.notas || '');
+                                const notaSegura = Sanitizer.escapeHTML(u.notes || '');
 
-                                // Alerta visual de criticidad (Borde rojo si tiene novedades acumuladas en el Fichero de Flota)
                                 const tieneAlertasMecanicas = u.tieneAlertas || false;
-                                const estiloBordeCritico = tieneAlertasMecanicas ? 'border: 2px solid #ef4444; box-shadow: 0 0 12px rgba(239, 68, 68, 0.3);' : '';
+                                const claseCritica = tieneAlertasMecanicas ? 'card-panel--critica' : '';
+                                const claseCampoColor = u.entregaCampo ? 'badge--danger' : 'badge--info';
 
                                 return `
-                                    <article class="card-panel" style="padding: 1rem; position: relative; display: flex; flex-direction: column; justify-content: space-between; ${estiloBordeCritico}">
-                                        
-                                        <!-- Encabezado de Tarjeta Táctil -->
-                                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
-                                            <div>
-                                                <strong style="font-size: 1.3rem; color: #f8fafc;">#${intSeguro}</strong>
-                                                <span class="badge ${u.entregaCampo ? 'badge--danger' : 'badge--info'}" class="btn-toggle-campo" data-id="${u.id}" style="cursor:pointer; font-size:0.7rem; margin-left:0.25rem;">
+                                    <article class="card-panel card-unidad-tactica ${claseCritica}" data-id="${u.id}">
+                                        <div class="card-unidad-header">
+                                            <div class="card-header-left">
+                                                <strong class="card-interno-display">#${intSeguro}</strong>
+                                                <span class="badge ${claseCampoColor} btn-toggle-campo-express" data-id="${u.id}">
                                                     ${u.entregaCampo ? 'CAMPO SÍ' : 'CAMPO NO'}
                                                 </span>
                                             </div>
-                                            <button class="btn-close-modal btn-remover-unidad-jornada" data-id="${u.id}" aria-label="Remover" style="background:none; border:none; color:#ef4444; font-size:1.2rem; cursor:pointer; padding:0;">&times;</button>
+                                            <button class="btn-remover-unidad-jornada" data-id="${u.id}" aria-label="Remover">&times;</button>
                                         </div>
 
-                                        <div style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.75rem; line-height: 1.3;">
-                                            <strong>${choSeguro}</strong> <span style="font-size:0.75rem;">(${tamSeguro})</span><br>
-                                            <span style="font-size:0.75rem; color:#64748b;">${modSeguro}</span>
+                                        <div class="card-unidad-info">
+                                            <span class="driver-title">${choSeguro}</span> <small class="cap-title">(${tamSeguro})</small><br>
+                                            <span class="model-title">${modSeguro}</span>
                                         </div>
 
-                                        <!-- Selector Táctil Manual de Vueltas de image_40dfca.png -->
-                                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.25rem; margin-bottom: 0.75rem;">
-                                            <button class="btn-primary btn-toggle-vuelta ${u.v10 ? '' : 'btn-vuelta-apagada'}" data-id="${u.id}" data-v="v10" style="font-size:0.75rem; padding:0.3rem; background-color: ${u.v10 ? '#22c55e' : '#334155'};">Vuelta 10</button>
-                                            <button class="btn-primary btn-toggle-vuelta ${u.v13 ? '' : 'btn-vuelta-apagada'}" data-id="${u.id}" data-v="v13" style="font-size:0.75rem; padding:0.3rem; background-color: ${u.v13 ? '#22c55e' : '#334155'};">Vuelta 13</button>
-                                            <button class="btn-primary btn-toggle-vuelta ${u.v16 ? '' : 'btn-vuelta-apagada'}" data-id="${u.id}" data-v="v16" style="font-size:0.75rem; padding:0.3rem; background-color: ${u.v16 ? '#22c55e' : '#334155'};">Vuelta 16</button>
-                                            <button class="btn-primary btn-toggle-vuelta ${u.v19 ? '' : 'btn-vuelta-apagada'}" data-id="${u.id}" data-v="v19" style="font-size:0.75rem; padding:0.3rem; background-color: ${u.v19 ? '#22c55e' : '#334155'};">Vuelta 19</button>
+                                        <div class="grid-vueltas-buttons">
+                                            <button class="btn-primary btn-toggle-vuelta ${u.v10 ? 'btn-vuelta-activa' : 'btn-vuelta-apagada'}" data-id="${u.id}" data-v="v10">10:00</button>
+                                            <button class="btn-primary btn-toggle-vuelta ${u.v13 ? 'btn-vuelta-activa' : 'btn-vuelta-apagada'}" data-id="${u.id}" data-v="v13">13:00</button>
+                                            <button class="btn-primary btn-toggle-vuelta ${u.v16 ? 'btn-vuelta-activa' : 'btn-vuelta-apagada'}" data-id="${u.id}" data-v="v16">16:00</button>
+                                            <button class="btn-primary btn-toggle-vuelta ${u.v19 ? 'btn-vuelta-activa' : 'btn-vuelta-apagada'}" data-id="${u.id}" data-v="v19">19:00</button>
                                         </div>
 
-                                        <!-- Contador Relacional de Vueltas Acumuladas -->
-                                        <div style="text-align: center; font-weight: bold; font-size: 1.1rem; color: #f8fafc; margin-bottom: 0.5rem;">
-                                            ${u.qVueltasTotales}/4
-                                            ${u.qVueltasTotales >= 4 ? '<span style="color:#ef4444; display:block; font-size:0.65rem; font-weight:700; letter-spacing:0.5px;">EXTRA ACTIVADO</span>' : ''}
+                                        <div class="vueltas-counter-display">
+                                            <span>${u.qVueltasTotales}/4</span>
+                                            ${u.qVueltasTotales >= 4 ? '<span class="label-extra-sub">EXTRA ACTIVADO</span>' : ''}
                                         </div>
 
-                                        <!-- Campo Dinámico de Comentario Corto -->
-                                        <div style="font-size: 0.75rem; color: #eab308; border-top: 1px solid #334155; padding-top: 0.4rem; cursor:pointer;" class="btn-editar-nota-tarjeta" data-id="${u.id}">
+                                        <div class="card-unidad-footer-notes btn-editar-nota-tarjeta" data-id="${u.id}">
                                             📝 <em>${notaSegura || 'Haga clic para agregar nota...'}</em>
                                         </div>
-
                                     </article>
                                 `;
                             }).join('')}
@@ -248,9 +237,10 @@ export class DashboardController {
                 `;
             });
 
-            this.unidadesSeccionesContainer.innerHTML = htmlHTML = htmlMaestro || `
-                <div style="color:#94a3b8; padding:3rem; text-align:center; border: 1px dashed #334155; border-radius:6px;">
-                    No hay camiones despachados para la fecha seleccionada. Presione el botón superior para dar de alta.
+            // CORREGIDO SINO: Reparado error de definición de variable interna htmlHTML
+            this.unidadesSeccionesContainer.innerHTML = htmlMaestro || `
+                <div class="placeholder-vacio-jornada">
+                    No hay camiones despachados para la fecha seleccionada. Ingrese el número en la barra superior.
                 </div>
             `;
             
@@ -263,7 +253,6 @@ export class DashboardController {
     }
 
     vincularEventosInteractivosTarjetas() {
-        // 1. Borrado instantáneo si se ingresó por error
         this.unidadesSeccionesContainer.querySelectorAll('.btn-remover-unidad-jornada').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const id = e.target.getAttribute('data-id');
@@ -273,25 +262,21 @@ export class DashboardController {
             });
         });
 
-        // 2. Conmutador Táctil de Vueltas de Salida (10, 13, 16 o 19) con persistencia instantánea
         this.unidadesSeccionesContainer.querySelectorAll('.btn-toggle-vuelta').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const id = e.target.getAttribute('data-id');
                 const campoVuelta = e.target.getAttribute('data-v');
-                const estaPrendida = !e.target.classList.contains('btn-vuelta-apagada');
+                const estaPrendida = e.target.classList.contains('btn-vuelta-activa');
 
-                const docRef = doc(db, "unidades", id);
-                await updateDoc(docRef, {
+                await updateDoc(doc(db, "unidades", id), {
                     [campoVuelta]: !estaPrendida 
                 });
             });
         });
 
-        // 3. Conmutador Táctil de Bandera de Campo (Permite toggle rápido con un clic)
-        this.unidadesSeccionesContainer.querySelectorAll('.badge').forEach(badge => {
+        this.unidadesSeccionesContainer.querySelectorAll('.btn-toggle-campo-express').forEach(badge => {
             badge.addEventListener('click', async (e) => {
                 const id = e.target.getAttribute('data-id');
-                if (!id) return;
                 const esActivoActualmente = e.target.textContent.includes('CAMPO SÍ');
                 
                 await updateDoc(doc(db, "unidades", id), {
@@ -300,31 +285,34 @@ export class DashboardController {
             });
         });
 
-        // 4. Edición de notas rápida en caliente
         this.unidadesSeccionesContainer.querySelectorAll('.btn-editar-nota-tarjeta').forEach(div => {
             div.addEventListener('click', async (e) => {
                 const id = e.currentTarget.getAttribute('data-id');
                 const nuevaNota = prompt("Ingrese nota u observación de la jornada para este camión:");
                 if (nuevaNota !== null) {
                     await updateDoc(doc(db, "unidades", id), {
-                        notas: nuevaNota.trim()
+                        notes: nuevaNota.trim()
                     });
                 }
             });
         });
     }
 
-    setupFormSubmissions() {
-        if (this.formAltaUnidad) {
-            this.formAltaUnidad.addEventListener('submit', async (e) => {
+    // MECÁNICA INTEGRADA: Inyección directa por Enter sin usar ventanas flotantes
+    setupExpressDispatchListener() {
+        if (!this.inputExpressUnidad) return;
+
+        this.inputExpressUnidad.addEventListener('keypress', async (e) => {
+            if (e.key === 'Enter') {
                 e.preventDefault();
                 
-                const buscadorTermino = document.getElementById('u-nombre').value.trim().toLowerCase();
-                const franjaSeleccionada = document.getElementById('u-ingreso').value;
+                const buscadorTermino = this.inputExpressUnidad.value.trim().toLowerCase();
+                const franjaSeleccionada = this.selectExpressIngreso.value;
                 const fechaActualBarra = this.globalDateFilter.value;
 
+                if (!buscadorTermino) return;
+
                 try {
-                    // Consultamos el registro del Fichero Maestro de Transporte
                     const maestroSnap = await getDocs(query(collection(db, "flota_maestra")));
                     let datosMaestros = null;
                     let idInternoEncontrado = null;
@@ -334,7 +322,6 @@ export class DashboardController {
                         const idDoc = docSnap.id.toLowerCase();
                         const choferDoc = (m.chofer || '').toLowerCase();
 
-                        // CORREGIDO EXPRÉS: Coincide si el operador ingresa el número de interno exacto o parte del nombre del chofer
                         if (idDoc === buscadorTermino || choferDoc.includes(buscadorTermino)) {
                             datosMaestros = m;
                             idInternoEncontrado = docSnap.id;
@@ -346,7 +333,6 @@ export class DashboardController {
                         return;
                     }
 
-                    // Verificamos si tiene alertas mecánicas en su historial previo para activar el borde de advertencia
                     const arrayHistoricoReclamos = datosMaestros.historial_novedades || [];
                     const registraAlertasMecanicas = arrayHistoricoReclamos.length > 0;
 
@@ -356,10 +342,10 @@ export class DashboardController {
                         modelo: datosMaestros.modelo,
                         tamanio: datosMaestros.tamanio,
                         ingreso: franjaSeleccionada, 
-                        entregaCampo: false, // Por defecto se inicializa en NO
-                        notas: '',
+                        entregaCampo: false, 
+                        notes: '',
                         fecha: fechaActualBarra,
-                        v10: false, // Inicializamos las vueltas apagadas fijas para control por clics
+                        v10: false, 
                         v13: false,
                         v16: false,
                         v19: false,
@@ -367,15 +353,13 @@ export class DashboardController {
                     };
 
                     await addDoc(collection(db, "unidades"), dataOperativa);
-                    
-                    this.formAltaUnidad.reset();
-                    this.toggleModal(this.modalUnidad, false);
+                    this.inputExpressUnidad.value = ''; // Limpieza instantánea para la siguiente carga
 
                 } catch (err) {
-                    console.error("Fallo crítico en el despacho exprés: ", err);
+                    console.error("Fallo crítico en el despacho exprés por Enter: ", err);
                 }
-            });
-        }
+            }
+        });
     }
 
     escucharPedidosJornada(fecha) {
@@ -392,14 +376,14 @@ export class DashboardController {
 
     renderPedidosList(pedidos) {
         this.listadoPedidosContainer.innerHTML = pedidos.map(p => `
-            <div class="card-panel" style="margin-bottom:0.75rem; padding:1rem; flex-direction:row; justify-content:space-between; align-items:center;">
+            <div class="card-panel manual-order-item-row">
                 <div>
                     <strong>Orden: #${Sanitizer.escapeHTML(p.numero_pedido)}</strong><br>
-                    <span style="font-size:0.85rem; color:#94a3b8;">DNI: ${Sanitizer.escapeHTML(p.dni_cliente || 'S/D')}</span>
+                    <span class="sub-text-dni">DNI: ${Sanitizer.escapeHTML(p.dni_cliente || 'S/D')}</span>
                 </div>
                 <span class="badge badge--info">$${parseFloat(p.importe).toLocaleString('es-AR')}</span>
             </div>
-        `).join('') || '<div style="color:#94a3b8; padding:1rem; text-align:center;">No hay órdenes cargadas hoy.</div>';
+        `).join('') || '<div class="placeholder-vacio-jornada">No hay órdenes cargadas hoy.</div>';
     }
 
     escucharReclamosJornada(fecha) {
@@ -411,12 +395,12 @@ export class DashboardController {
             this.listadoReclamosContainer.innerHTML = snapshot.docs.map(docSnap => {
                 const p = docSnap.data();
                 return `
-                    <div class="card-panel" style="border-left:3px solid #ef4444; margin-bottom:0.75rem; padding:1rem;">
+                    <div class="card-panel card-panel--danger-alert">
                         <strong>Orden Crítica: #${Sanitizer.escapeHTML(p.numero_pedido)}</strong><br>
-                        <span style="font-size:0.85rem; color:#ef4444;">⚠️ Motivo: ${Sanitizer.escapeHTML(p.motivoCritico)}</span>
+                        <span class="alert-reason-text">⚠️ Motivo: ${Sanitizer.escapeHTML(p.motivoCritico)}</span>
                     </div>
                 `;
-            }).join('') || '<div style="color:#94a3b8; padding:1rem; text-align:center;">No hay reclamos activos hoy.</div>';
+            }).join('') || '<div class="placeholder-vacio-jornada">No hay reclamos activos hoy.</div>';
         });
     }
 

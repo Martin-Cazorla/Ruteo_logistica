@@ -1,0 +1,39 @@
+// scss/pages/_transporte.scss
+@use '../base/variables' as *;
+
+// Estructura contenedora de la vista de flota
+.dashboard-container {
+  padding: 2rem;
+  background-color: $color-bg-dark;
+  min-height: calc(100vh - 70px); // Ajustado al alto remanente del header
+}
+
+// Grilla operativa de doble columna (Formulario vs Listado Maestro)
+.grid-two-columns {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+
+  @media (min-width: 1024px) {
+    grid-template-columns: 450px 1fr; // El formulario se mantiene compacto a la izquierda
+  }
+}
+
+// Caja de filtrado reactivo del lado del cliente
+.search-box {
+  width: 100%;
+  margin-bottom: 0.5rem;
+
+  input[type="search"] {
+    width: 100%;
+    // Hereda los estilos estéticos de tu .select-field unificado en forms.scss
+  }
+}
+
+// Texto descriptivo de asistencia operativa
+.instruction-text {
+  color: $color-text-muted;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  margin: 0 0 0.5rem 0;
+}

@@ -5,17 +5,86 @@
   padding: 2rem;
   background-color: $color-bg-dark;
   min-height: calc(100vh - 140px);
+  box-sizing: border-box;
 }
 
 .panel-actions-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
 
   .panel-title {
     color: $color-text-main;
     margin: 0;
+    font-size: 1.5rem;
+  }
+}
+
+// Barra superior de control de jornadas operativas
+.filter-bar {
+  background-color: $color-bg-card;
+  border-bottom: 1px solid $color-border;
+  padding: 1rem 2rem;
+  display: flex;
+  align-items: center;
+
+  .filter-group {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+
+    label {
+      color: $color-text-main;
+      font-size: 0.9rem;
+    }
+
+    input[type="date"] {
+      padding: 0.45rem 0.75rem;
+      font-size: 0.9rem;
+      width: auto;
+    }
+  }
+}
+
+// Arquitectura del Tab-System (Botones de Pestañas)
+.tab-list {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 2px solid $color-border;
+  margin-bottom: 1.5rem;
+  overflow-x: auto;
+
+  .tab-btn {
+    background: none;
+    border: none;
+    color: $color-text-muted;
+    padding: 0.75rem 1.25rem;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: $transition-smooth;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    white-space: nowrap;
+
+    &:hover {
+      color: $color-text-main;
+    }
+
+    &.active {
+      color: $color-time-16-19;
+      font-weight: 600;
+      border-bottom: 2px solid $color-time-16-19;
+    }
+  }
+}
+
+.tab-panel {
+  display: none;
+  
+  &.active {
+    display: block;
   }
 }
 
@@ -24,6 +93,7 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: 1.5rem;
+  align-items: start;
 
   @media (min-width: 1024px) {
     grid-template-columns: 450px 1fr;
@@ -35,4 +105,39 @@
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 1.5rem;
   margin-top: 1.5rem;
+}
+
+// Módulo específico para carga de planillas excel de Jumbo
+.upload-box {
+  border: 2px dashed $color-border;
+  background-color: rgba($color-bg-dark, 0.4);
+  padding: 2rem;
+  text-align: center;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  transition: $transition-smooth;
+
+  &:hover {
+    border-color: $color-time-16-19;
+  }
+
+  input[type="file"] {
+    display: none;
+  }
+
+  .custom-file-upload {
+    display: inline-block;
+    color: $color-text-main;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.95rem;
+  }
+
+  #file-name-display {
+    display: block;
+    margin-top: 0.75rem;
+    font-size: 0.85rem;
+    color: $color-text-muted;
+    font-style: italic;
+  }
 }

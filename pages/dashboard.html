@@ -17,6 +17,7 @@
                 <a href="dashboard.html" class="nav-link nav-link--active">Panel de Carga</a>
                 <a href="shipping.html" class="nav-link">Consola Mapa</a>
                 <a href="transporte.html" class="nav-link">Flota</a>
+                <a href="clientes.html" class="nav-link">Clientes</a>
                 <a href="administracion.html" class="nav-link">Seguridad</a>
             </div>
         </nav>
@@ -34,7 +35,6 @@
             <div class="tab-list" role="tablist" aria-label="Secciones del panel de operaciones">
                 <button id="tab-unidades" class="tab-btn active" role="tab" aria-selected="true" aria-controls="panel-unidades">Control de Unidades</button>
                 <button id="tab-pedidos" class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-pedidos">Pedidos de la Jornada</button>
-                <button id="tab-clientes" class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-clientes">Base de Clientes</button>
                 <button id="tab-reclamos" class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-reclamos">Gestión de Reclamos</button>
             </div>
 
@@ -50,8 +50,7 @@
                     <span class="badge badge--danger">En Horas Extra: <strong id="count-extra">0</strong></span>
                 </div>
 
-                <div id="unidades-grid" class="unidades-grid-cards">
-                    </div>
+                <div id="unidades-grid" class="unidades-grid-cards"></div>
             </section>
 
             <section id="panel-pedidos" class="tab-panel" role="tabpanel" aria-labelledby="tab-pedidos" hidden>
@@ -76,44 +75,7 @@
                         <div class="search-box">
                             <input type="search" id="search-pedido" class="select-field" placeholder="Buscar por número de orden o DNI...">
                         </div>
-                        <div id="listado-pedidos" class="list-scroll-box">
-                            </div>
-                    </div>
-                </div>
-            </section>
-
-            <section id="panel-clientes" class="tab-panel" role="tabpanel" aria-labelledby="tab-clientes" hidden>
-                <div class="grid-two-columns">
-                    <div class="card-panel">
-                        <h3 class="section-title">Alta de Cliente Nuevo</h3>
-                        <form id="form-cliente" class="form-vertical">
-                            <div class="form-group">
-                                <label for="c-dni">DNI / Identificación:</label>
-                                <input type="text" id="c-dni" class="select-field" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="c-nombre">Nombre y Apellido:</label>
-                                <input type="text" id="c-nombre" class="select-field" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="c-telefono">Teléfono de Contacto:</label>
-                                <input type="tel" id="c-telefono" class="select-field" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="c-mail">Correo Electrónico:</label>
-                                <input type="email" id="c-mail" class="select-field" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="c-direccion">Dirección Principal:</label>
-                                <input type="text" id="c-direccion" class="select-field" placeholder="Calle, Altura, Localidad" required>
-                            </div>
-                            <button type="submit" class="btn-primary">Guardar Cliente en Base Global</button>
-                        </form>
-                    </div>
-                    <div class="card-panel">
-                        <h3 class="section-title">Fichero de Clientes Registrados</h3>
-                        <input type="search" id="search-cliente" class="select-field" placeholder="Filtrar por DNI o Apellido...">
-                        <div id="listado-clientes" class="list-scroll-box"></div>
+                        <div id="listado-pedidos" class="list-scroll-box"></div>
                     </div>
                 </div>
             </section>
@@ -138,7 +100,7 @@
                                 <label for="rec-descripcion">Descripción del Problema (Alerta Fuego):</label>
                                 <textarea id="rec-descripcion" class="select-field" rows="4" placeholder="Detalle el motivo del reclamo..." required></textarea>
                             </div>
-                            <button type="submit" class="btn-danger">Cargar Reclamo y Activar Alerta Crítica</button>
+                            <button type="submit" class="btn-primary" style="background-color: #ef4444;">Cargar Reclamo y Activar Alerta Crítica</button>
                         </form>
                     </div>
                     <div class="card-panel">
@@ -159,8 +121,10 @@
             <form id="form-manual-pedido" class="form-vertical">
                 <div class="form-group">
                     <label for="p-dni">DNI del Cliente:</label>
-                    <input type="text" id="p-dni" class="select-field" placeholder="Buscar cliente..." required>
-                    <button type="button" id="btn-verificar-dni" class="btn-secondary">Validar DNI</button>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <input type="text" id="p-dni" class="select-field" placeholder="Buscar cliente..." required>
+                        <button type="button" id="btn-verificar-dni" class="btn-secondary" style="white-space: nowrap;">Validar DNI</button>
+                    </div>
                 </div>
                 <div id="domicilios-select-group" class="form-group" style="display:none;">
                     <label for="p-direccion-select">Seleccionar Domicilio Registrado:</label>
@@ -170,7 +134,7 @@
                     <label for="p-direccion-nueva">Dirección de Entrega (Nueva / Única):</label>
                     <input type="text" id="p-direccion-nueva" class="select-field" placeholder="Calle, Altura, Localidad">
                 </div>
-                <div class="grid-form-row">
+                <div class="grid-form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                     <div class="form-group">
                         <label for="p-numero">Nº Pedido (Jumbo):</label>
                         <input type="text" id="p-numero" class="select-field" required>
@@ -202,14 +166,14 @@
             </header>
             <form id="form-alta-unidad" class="form-vertical">
                 <div class="form-group">
-                    <label for="u-nombre">Identificador de la Unidad (Chofer / Patente):</label>
-                    <input type="text" id="u-nombre" class="select-field" placeholder="Ej: Interno 14 - Carlos" required>
+                    <label for="u-nombre">Identificador de la Unidad (Número de Interno):</label>
+                    <input type="text" id="u-nombre" class="select-field" placeholder="Ej: 101" required>
                 </div>
                 <div class="form-group">
                     <label for="u-ingreso">Horario de Ingreso por planilla:</label>
                     <input type="time" id="u-ingreso" class="select-field" required>
                 </div>
-                <div class="grid-form-row">
+                <div class="grid-form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                     <div class="form-group">
                         <label for="u-salida">Vuelta de Salida:</label>
                         <select id="u-salida" class="select-field">
@@ -229,9 +193,9 @@
                         </select>
                     </div>
                 </div>
-                <div class="form-group checkbox-row">
-                    <input type="checkbox" id="u-campo">
-                    <label for="u-campo">¿Realizó entrega en campo el día de hoy? (Máx 1 vez/día)</label>
+                <div class="form-group checkbox-row" style="display: flex; align-items: center; gap: 0.5rem; margin: 1rem 0;">
+                    <input type="checkbox" id="u-campo" style="width: 18px; height: 18px; margin: 0;">
+                    <label for="u-campo" style="margin: 0;">¿Realizó entrega en campo el día de hoy?</label>
                 </div>
                 <div class="form-group">
                     <label for="u-notas">Notas y Comentarios Operativos:</label>

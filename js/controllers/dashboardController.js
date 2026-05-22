@@ -20,7 +20,6 @@ export class DashboardController {
         this.globalDateFilter = document.getElementById('global-date-filter');
         this.unidadesSeccionesContainer = document.getElementById('unidades-secciones-container');
         
-        // Inputs express integrados de tu otro proyecto para despacho rápido
         this.inputExpressUnidad = document.getElementById('input-express-unidad');
         this.selectExpressIngreso = document.getElementById('select-express-ingreso');
 
@@ -63,7 +62,7 @@ export class DashboardController {
         this.setupTabsBehavior();
         this.setupModalToggles();
         this.setupExcelEventListeners();
-        this.setupExpressDispatchListener(); // Vinculación express por Enter
+        this.setupExpressDispatchListener();
         this.setupDniCrossSearching();
 
         this.sincronizarTodaLaJornada();
@@ -179,7 +178,6 @@ export class DashboardController {
                 const listaUnidades = mapaGrupos[franja];
                 if (listaUnidades.length === 0) return;
 
-                // CORREGIDO: Eliminación de estilos en línea del mapeador HTML
                 htmlMaestro += `
                     <div class="bloque-horario-jornada">
                         <h3 class="horario-header-title">
@@ -237,7 +235,6 @@ export class DashboardController {
                 `;
             });
 
-            // CORREGIDO SINO: Reparado error de definición de variable interna htmlHTML
             this.unidadesSeccionesContainer.innerHTML = htmlMaestro || `
                 <div class="placeholder-vacio-jornada">
                     No hay camiones despachados para la fecha seleccionada. Ingrese el número en la barra superior.
@@ -298,7 +295,6 @@ export class DashboardController {
         });
     }
 
-    // MECÁNICA INTEGRADA: Inyección directa por Enter sin usar ventanas flotantes
     setupExpressDispatchListener() {
         if (!this.inputExpressUnidad) return;
 
@@ -353,7 +349,7 @@ export class DashboardController {
                     };
 
                     await addDoc(collection(db, "unidades"), dataOperativa);
-                    this.inputExpressUnidad.value = ''; // Limpieza instantánea para la siguiente carga
+                    this.inputExpressUnidad.value = ''; 
 
                 } catch (err) {
                     console.error("Fallo crítico en el despacho exprés por Enter: ", err);

@@ -19,6 +19,125 @@
   }
 }
 
+// NUEVA COMPACTACIÓN DE TARJETAS LOGÍSTICAS (image_4328ec.png)
+.card-unidad-tactica {
+  padding: 0.65rem 0.75rem; // Margen interno súper ajustado para ganar aire
+  min-height: auto; // Que no ocupe espacio muerto vertical
+  gap: 0.5rem;
+  border-radius: 8px;
+
+  &.card-panel--critica {
+    border: 2px solid #ef4444;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.25);
+  }
+
+  .card-unidad-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    .card-header-left {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+
+      .card-interno-display {
+        font-size: 1.15rem; // Interno compacto y legible
+        color: #f8fafc;
+        font-weight: 800;
+      }
+
+      // Píldoras compactas para optimizar ancho
+      .badge {
+        padding: 0.15rem 0.4rem;
+        font-size: 0.68rem;
+        font-weight: 700;
+        border-radius: 4px;
+      }
+    }
+
+    .btn-remover-unidad-jornada {
+      background: none;
+      border: none;
+      color: #64748b;
+      font-size: 1.2rem;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0;
+
+      &:hover {
+        color: #ef4444;
+      }
+    }
+  }
+
+  .card-unidad-info {
+    font-size: 0.78rem; // Reducción de tipografía general
+    color: $color-text-muted;
+    line-height: 1.2;
+
+    .driver-title {
+      color: $color-text-main;
+      font-weight: 600;
+    }
+  }
+
+  // Cuadrícula micro de botones de vueltas para no estirar la tarjeta horizontalmente
+  .grid-vueltas-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.25rem;
+
+    button.btn-toggle-vuelta {
+      font-size: 0.72rem; // Tamaño exacto de image_4328ec.png
+      padding: 0.25rem 0.2rem;
+      font-weight: 600;
+      border-radius: 3px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      text-align: center;
+
+      &.btn-vuelta-apagada {
+        background-color: #1e293b;
+        color: #64748b;
+        border: 1px solid #334155;
+      }
+
+      &.btn-vuelta-activa {
+        background-color: #22c55e;
+        color: #ffffff;
+      }
+    }
+  }
+
+  .vueltas-counter-display {
+    text-align: center;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #ffffff;
+
+    .label-extra-sub {
+      display: block;
+      color: #ef4444;
+      font-size: 0.6rem;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+    }
+  }
+
+  .card-unidad-footer-notes {
+    font-size: 0.7rem;
+    color: #eab308;
+    border-top: 1px solid rgba($color-border, 0.5);
+    padding-top: 0.3rem;
+    text-align: center;
+
+    &:hover {
+      color: #fde047;
+    }
+  }
+}
+
 .separator {
   border: 0;
   border-top: 1px solid $color-border;

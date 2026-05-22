@@ -2,10 +2,6 @@
 @use 'sass:color';
 @use '../base/variables' as *;
 
-// ==========================================================================
-// 1. Cabeceras de Sección y Contadores (Estructura Base)
-// ==========================================================================
-
 .section-header {
   display: flex;
   flex-direction: column;
@@ -26,10 +22,6 @@
   gap: 0.75rem;
   flex-wrap: wrap;
 }
-
-// ==========================================================================
-// 2. Componentes de Etiquetas Dinámicas (Badges Logísticos)
-// ==========================================================================
 
 .badge {
   padding: 0.4rem 0.75rem;
@@ -64,10 +56,6 @@
   }
 }
 
-// ==========================================================================
-// 3. NUEVO: Filtro Maestro de Jornada Operativa (Nivel Superior)
-// ==========================================================================
-
 .filter-bar {
   background-color: $color-bg-card;
   border-bottom: 1px solid $color-border;
@@ -86,7 +74,6 @@
       font-size: 0.95rem;
     }
 
-    // Input de tipo fecha adaptado a la estética oscura de Martinez Routing
     input[type="date"] {
       max-width: 200px;
       background-color: $color-bg-dark;
@@ -107,12 +94,42 @@
 }
 
 // ==========================================================================
-// 4. Grillas de Contención Estructural
+// CONFIGURACIÓN DE ALTA DENSIDAD MAESTRA (Mapeado exacto de image_4328ec.png)
 // ==========================================================================
+.form-vertical-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem; // Reducción de brecha entre bloques horarios
+}
+
+.bloque-horario-jornada {
+  border-bottom: 1px solid rgba($color-border, 0.3);
+  padding-bottom: 0.75rem;
+
+  .horario-header-title {
+    background-color: #1a2232;
+    padding: 0.35rem 0.75rem;
+    border-radius: 4px;
+    color: #38bdf8;
+    font-size: 0.85rem; // Cabecera de carril más fina
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+    letter-spacing: 0.5px;
+    border-left: 3px solid #38bdf8;
+  }
+}
+
+// MODIFICADO EXPRÉS: Bajamos el minmax a 175px para obligar la compresión horizontal
+.horario-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+  gap: 0.75rem; // Menos espacio muerto intermedio
+}
 
 .unidades-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1.25rem;
+  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+  gap: 0.75rem;
   margin-top: 1.25rem;
 }

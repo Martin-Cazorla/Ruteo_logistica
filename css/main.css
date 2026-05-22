@@ -165,10 +165,39 @@
   border-color: #3b82f6;
 }
 
+.form-vertical-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.bloque-horario-jornada {
+  border-bottom: 1px solid rgba(51, 65, 85, 0.3);
+  padding-bottom: 0.75rem;
+}
+.bloque-horario-jornada .horario-header-title {
+  background-color: #1a2232;
+  padding: 0.35rem 0.75rem;
+  border-radius: 4px;
+  color: #38bdf8;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+  letter-spacing: 0.5px;
+  border-left: 3px solid #38bdf8;
+}
+
+.horario-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+  gap: 0.75rem;
+}
+
 .unidades-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1.25rem;
+  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+  gap: 0.75rem;
   margin-top: 1.25rem;
 }
 
@@ -181,6 +210,7 @@
   display: flex;
   border-bottom: 2px solid #334155;
   gap: 0.5rem;
+  overflow-x: hidden;
 }
 .tab-container .tab-list .tab-btn {
   background: none;
@@ -243,6 +273,35 @@
   accent-color: #3b82f6;
 }
 
+.search-express-bar {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background-color: #1e293b;
+  border-left: 4px solid #06b6d4;
+}
+.search-express-bar .express-inputs-group {
+  display: flex;
+  gap: 0.75rem;
+  width: 100%;
+}
+.search-express-bar .express-inputs-group input[type=text] {
+  flex: 1;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.75rem;
+}
+.search-express-bar .express-inputs-group input[type=text]:focus {
+  border-color: #06b6d4;
+  box-shadow: 0 0 8px rgba(6, 182, 212, 0.2);
+}
+.search-express-bar .express-inputs-group select {
+  width: 180px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
 .upload-box {
   border: 2px dashed #334155;
   border-radius: 8px;
@@ -267,6 +326,29 @@
 .upload-box #file-name-display {
   color: #94a3b8;
   font-size: 0.85rem;
+}
+
+.search-input-inline {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.grid-form-row-two-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.grid-two-columns {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+@media (min-width: 1024px) {
+  .grid-two-columns {
+    grid-template-columns: 380px 1fr;
+  }
 }
 
 .modal-overlay {
@@ -337,6 +419,105 @@
   font-size: 1.15rem;
   border-left: 3px solid #3b82f6;
   padding-left: 0.5rem;
+}
+
+.card-unidad-tactica {
+  padding: 0.65rem 0.75rem;
+  min-height: auto;
+  gap: 0.5rem;
+  border-radius: 8px;
+}
+.card-unidad-tactica.card-panel--critica {
+  border: 2px solid #ef4444;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.25);
+}
+.card-unidad-tactica .card-unidad-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.card-unidad-tactica .card-unidad-header .card-header-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.card-unidad-tactica .card-unidad-header .card-header-left .card-interno-display {
+  font-size: 1.15rem;
+  color: #f8fafc;
+  font-weight: 800;
+}
+.card-unidad-tactica .card-unidad-header .card-header-left .badge {
+  padding: 0.15rem 0.4rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  border-radius: 4px;
+}
+.card-unidad-tactica .card-unidad-header .btn-remover-unidad-jornada {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 1.2rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+}
+.card-unidad-tactica .card-unidad-header .btn-remover-unidad-jornada:hover {
+  color: #ef4444;
+}
+.card-unidad-tactica .card-unidad-info {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  line-height: 1.2;
+}
+.card-unidad-tactica .card-unidad-info .driver-title {
+  color: #f8fafc;
+  font-weight: 600;
+}
+.card-unidad-tactica .grid-vueltas-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.25rem;
+}
+.card-unidad-tactica .grid-vueltas-buttons button.btn-toggle-vuelta {
+  font-size: 0.72rem;
+  padding: 0.25rem 0.2rem;
+  font-weight: 600;
+  border-radius: 3px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  text-align: center;
+}
+.card-unidad-tactica .grid-vueltas-buttons button.btn-toggle-vuelta.btn-vuelta-apagada {
+  background-color: #1e293b;
+  color: #64748b;
+  border: 1px solid #334155;
+}
+.card-unidad-tactica .grid-vueltas-buttons button.btn-toggle-vuelta.btn-vuelta-activa {
+  background-color: #22c55e;
+  color: #ffffff;
+}
+.card-unidad-tactica .vueltas-counter-display {
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #ffffff;
+}
+.card-unidad-tactica .vueltas-counter-display .label-extra-sub {
+  display: block;
+  color: #ef4444;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+.card-unidad-tactica .card-unidad-footer-notes {
+  font-size: 0.7rem;
+  color: #eab308;
+  border-top: 1px solid rgba(51, 65, 85, 0.5);
+  padding-top: 0.3rem;
+  text-align: center;
+}
+.card-unidad-tactica .card-unidad-footer-notes:hover {
+  color: #fde047;
 }
 
 .separator {
@@ -585,7 +766,7 @@
 }
 .card-unidad-tactica .card-unidad-footer-notes {
   font-size: 0.75rem;
-  color: #eab308;
+  color: #ea8808;
   border-top: 1px solid rgba(51, 65, 85, 0.4);
   padding-top: 0.5rem;
   margin-top: auto;

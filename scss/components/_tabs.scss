@@ -10,6 +10,7 @@
     display: flex;
     border-bottom: 2px solid $color-border;
     gap: 0.5rem;
+    overflow-x: hidden; // CORREGIDO: Chau scroll molesto en cabecera
 
     .tab-btn {
       background: none;
@@ -30,7 +31,7 @@
       }
 
       &.active {
-        color: $color-time-16-19; // Usamos tu color destacado de ventana
+        color: $color-time-16-19; 
         border-bottom: 2px solid $color-time-16-19;
       }
     }

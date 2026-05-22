@@ -41,16 +41,19 @@
             <section id="panel-unidades" class="tab-panel active" role="tabpanel" aria-labelledby="tab-unidades">
                 <div class="panel-actions-header">
                     <h2 class="panel-title">Monitoreo de Flota Activa</h2>
-                    <button id="btn-add-unidad-modal" class="btn-primary">+ Registrar Unidad para Hoy</button>
+                    <button id="btn-add-unidad-modal" class="btn-primary" style="background-color: #06b6d4;">+ Despachar Unidad Express</button>
                 </div>
                 
-                <div class="dashboard-counters" role="region" aria-live="polite">
+                <div class="dashboard-counters" role="region" aria-live="polite" style="margin-bottom: 1.5rem;">
                     <span class="badge badge--info">Unidades Activas: <strong id="count-total">0</strong></span>
                     <span class="badge badge--success">En Vuelta: <strong id="count-disp">0</strong></span>
                     <span class="badge badge--danger">En Horas Extra: <strong id="count-extra">0</strong></span>
                 </div>
 
-                <div id="unidades-grid" class="unidades-grid-cards"></div>
+                <!-- CONTENEDOR MAESTRO DE BLOQUES HORARIOS INTERACTIVOS -->
+                <div id="unidades-secciones-container" class="form-vertical" style="gap: 2rem;">
+                    <!-- Los bloques horarios (09:00, 10:00, 11:00, Electro, Ausente) se inyectan dinámicamente acá -->
+                </div>
             </section>
 
             <section id="panel-pedidos" class="tab-panel" role="tabpanel" aria-labelledby="tab-pedidos" hidden>
@@ -158,50 +161,29 @@
         </div>
     </div>
 
+    <!-- MODAL REFACTORIZADO: DESPACHO TÁCTICO ULTRA RÁPIDO -->
     <div id="modal-unidad" class="modal-overlay" aria-hidden="true" role="dialog">
-        <div class="modal-content">
+        <div class="modal-content" style="max-width: 450px;">
             <header class="modal-header">
-                <h3>Asignación de Unidad para la Jornada</h3>
+                <h3>Despacho Exprés de Camión</h3>
                 <button class="btn-close-modal" aria-label="Cerrar ventana">&times;</button>
             </header>
             <form id="form-alta-unidad" class="form-vertical">
                 <div class="form-group">
-                    <label for="u-nombre">Identificador de la Unidad (Número de Interno):</label>
-                    <input type="text" id="u-nombre" class="select-field" placeholder="Ej: 101" required>
+                    <label for="u-nombre">Número de Interno o Nombre del Chofer:</label>
+                    <input type="text" id="u-nombre" class="select-field" placeholder="Ej: 101 o Carlos Oliva" required autocomplete="off">
                 </div>
                 <div class="form-group">
-                    <label for="u-ingreso">Horario de Ingreso por planilla:</label>
-                    <input type="time" id="u-ingreso" class="select-field" required>
+                    <label for="u-ingreso">Planilla / Franja de Ingreso:</label>
+                    <select id="u-ingreso" class="select-field" required>
+                        <option value="09:00 hs">09:00 hs</option>
+                        <option value="10:00 hs">10:00 hs</option>
+                        <option value="11:00 hs">11:00 hs</option>
+                        <option value="Electro">Electro</option>
+                        <option value="Ausente">Ausente / Franco</option>
+                    </select>
                 </div>
-                <div class="grid-form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                    <div class="form-group">
-                        <label for="u-salida">Vuelta de Salida:</label>
-                        <select id="u-salida" class="select-field">
-                            <option value="10">Vuelta 10:00 hs</option>
-                            <option value="13">Vuelta 13:00 hs</option>
-                            <option value="16">Vuelta 16:00 hs</option>
-                            <option value="19">Vuelta 19:00 hs</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="u-vueltas">Cantidad de Vueltas:</label>
-                        <select id="u-vueltas" class="select-field">
-                            <option value="1">1 Vuelta</option>
-                            <option value="2">2 Vueltas</option>
-                            <option value="3">3 Vueltas (Máx Estándar)</option>
-                            <option value="4">4 Vueltas (Horas Extra)</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-group checkbox-row" style="display: flex; align-items: center; gap: 0.5rem; margin: 1rem 0;">
-                    <input type="checkbox" id="u-campo" style="width: 18px; height: 18px; margin: 0;">
-                    <label for="u-campo" style="margin: 0;">¿Realizó entrega en campo el día de hoy?</label>
-                </div>
-                <div class="form-group">
-                    <label for="u-notas">Notas y Comentarios Operativos:</label>
-                    <textarea id="u-notas" class="select-field" placeholder="Novedades mecánicas, demoras, etc..."></textarea>
-                </div>
-                <button type="submit" class="btn-primary w-100">Dar de Alta Unidad</button>
+                <button type="submit" class="btn-primary w-100" style="background-color: #06b6d4; margin-top: 0.5rem;">Cargar Ficha Operativa</button>
             </form>
         </div>
     </div>

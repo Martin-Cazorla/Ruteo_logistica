@@ -167,7 +167,7 @@ export class TransporteController {
                 if (notasHistorial.length === 0) {
                     this.modalListadoNovedades.innerHTML = `
                         <div style="color:#22c55e; text-align:center; padding:1.5rem; font-size:0.9rem;">
-                            ✅ Esta unidad no registra alertas mecánicas en su historial corporativo.
+                            ✅ Esta unidad no registra alertas mecánicas o reclamos en su historial.
                         </div>
                     `;
                     return;

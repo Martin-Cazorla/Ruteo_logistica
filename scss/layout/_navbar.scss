@@ -5,21 +5,22 @@
 .app-header {
   background-color: $color-bg-card;
   border-bottom: 1px solid $color-border;
-  min-height: 70px; // Permite que la barra crezca verticalmente si los botones se acomodan abajo
+  min-height: 70px;
   display: flex;
   align-items: center;
   padding: 0.75rem 2rem;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  position: relative;
+  z-index: 100;
 }
 
 .app-navbar {
   display: flex;
-  flex-direction: column; // Distribución vertical por defecto en pantallas chicas
+  flex-direction: column; 
   gap: 1rem;
   align-items: center;
   width: 100%;
 
-  // Disparador de maquetación horizontal para monitores y laptops de despacho
   @media (min-width: 768px) {
     flex-direction: row;
     justify-content: space-between;
@@ -34,36 +35,37 @@
     white-space: nowrap;
   }
 
-  // Contenedor modular de enlaces de navegación (Píldoras accesibles)
+  // CORREGIDO SENIOR: Estructura de navegación dedicada e independiente de los badges globales
   .dashboard-counters {
     display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap; // Evita el desborde forzando el salto de línea ordenado
+    gap: 0.35rem;
+    flex-wrap: wrap; 
     justify-content: center;
 
-    a.badge {
+    // Enlaces limpios sin decoraciones ni renglones residuales
+    a.nav-link {
+      text-decoration: none; // Elimina cualquier renglón o subrayado nativo del navegador
       transition: $transition-smooth;
-      border: 1px solid transparent;
-      padding: 0.5rem 0.85rem;
+      padding: 0.5rem 1rem;
       border-radius: 6px;
       font-size: 0.85rem;
       font-weight: 500;
       color: $color-text-muted;
-      background-color: rgba($color-border, 0.3);
+      background: none;
+      border: 1px solid transparent;
 
       &:hover {
-        background-color: rgba($color-time-16-19, 0.25);
-        border-color: $color-time-16-19;
-        color: #ffffff;
+        color: $color-text-main;
+        background-color: rgba($color-border, 0.3);
       }
 
-      // Estilo de resalte de página actual
-      &--active {
-        background-color: $color-time-16-19 !important;
-        color: #ffffff !important;
-        border-color: $color-time-16-19;
+      // Clase de resalte estilizada para la vista activa del operador
+      &.nav-link--active {
+        background-color: rgba($color-time-16-19, 0.15) !important;
+        color: $color-time-16-19 !important;
+        border-color: rgba($color-time-16-19, 0.4);
         font-weight: 600;
-        box-shadow: 0 0 10px rgba($color-time-16-19, 0.4);
+        box-shadow: inset 0 0 4px rgba($color-time-16-19, 0.1);
       }
     }
   }
@@ -83,7 +85,7 @@
     border-radius: 50%;
     
     &--active {
-      background-color: $color-time-13-16; // Verde esmeralda
+      background-color: $color-time-13-16; 
       box-shadow: 0 0 8px $color-time-13-16;
     }
   }

@@ -12,11 +12,11 @@
         <nav class="app-navbar" aria-label="Navegación del sistema">
             <div class="brand-title">Martinez Routing Flota</div>
             <div class="dashboard-counters">
-                <a href="../index.html" class="badge badge--info">Inicio</a>
-                <a href="dashboard.html" class="badge badge--info">Panel de Carga</a>
-                <a href="shipping.html" class="badge badge--info">Consola Mapa</a>
-                <a href="transporte.html" class="badge badge--info badge--active">Flota</a>
-                <a href="administracion.html" class="badge badge--info">Seguridad</a>
+                <a href="../index.html" class="nav-link">Inicio</a>
+                <a href="dashboard.html" class="nav-link">Panel de Carga</a>
+                <a href="shipping.html" class="nav-link">Consola Mapa</a>
+                <a href="transporte.html" class="nav-link nav-link--active">Flota</a>
+                <a href="administracion.html" class="nav-link">Seguridad</a>
             </div>
         </nav>
     </header>
@@ -26,7 +26,7 @@
             
             <section class="card-panel" aria-labelledby="form-flota-title">
                 <h2 id="form-flota-title" class="section-title">Alta de Unidad Nueva (Fichero Maestro)</h2>
-                <p class="instruction-text">Registre los camiones estables que integran la flota de distribución central corporativa.</p>
+                <p class="instruction-text">Registre las camionetas estables que integran la flota de distribución de Jumbo Martinez.</p>
                 
                 <form id="form-alta-transporte" class="form-vertical">
                     <div class="form-group">
@@ -76,13 +76,12 @@
                 <button class="btn-close-modal" id="btn-cerrar-modal-reclamos" aria-label="Cerrar ventana">&times;</button>
             </header>
             <div class="card-panel">
-                <p class="instruction-text">Registro acumulado de alertas mecánicas y comentarios reportados por los despachadores:</p>
-                <div id="modal-listado-novedades" class="list-scroll-box" style="max-height: 300px; overflow-y: auto;">
-                    </div>
+                <p class="instruction-text">Registro acumulado de alertas mecánicas y reclamos reportados</p>
+                <div id="modal-listado-novedades" class="list-scroll-box" style="max-height: 300px; overflow-y: auto;"></div>
             </div>
         </div>
     </div>
-    
+
     <script type="module" src="../js/controllers/transporteController.js"></script>
 </body>
 </html>

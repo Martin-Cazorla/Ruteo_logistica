@@ -695,6 +695,61 @@
   width: 100%;
 }
 
+.cliente-item-row {
+  flex-direction: row !important;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.65rem 0.75rem !important;
+  border-left: 3px solid #10b981;
+  border-radius: 6px;
+  gap: 0.5rem !important;
+}
+.cliente-item-row .cliente-data-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  line-height: 1.2;
+}
+.cliente-item-row .cliente-data-info .cliente-name-title {
+  color: #f8fafc;
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+.cliente-item-row .cliente-data-info .cliente-sub-text {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+.cliente-item-row .cliente-data-info .cliente-sub-text strong {
+  color: #f8fafc;
+}
+.cliente-item-row .cliente-actions-trigger {
+  display: flex;
+  gap: 0.4rem;
+}
+.cliente-item-row .cliente-actions-trigger button {
+  padding: 0.3rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-radius: 4px;
+  cursor: pointer;
+  border: none;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.cliente-item-row .cliente-actions-trigger .btn-edit-inline {
+  background-color: #334155;
+  color: #38bdf8;
+}
+.cliente-item-row .cliente-actions-trigger .btn-edit-inline:hover {
+  background-color: #475569;
+}
+.cliente-item-row .cliente-actions-trigger .btn-delete-inline {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+.cliente-item-row .cliente-actions-trigger .btn-delete-inline:hover {
+  background-color: rgba(239, 68, 68, 0.3);
+}
+
 .dashboard-container {
   padding: 2rem;
   background-color: #0f172a;

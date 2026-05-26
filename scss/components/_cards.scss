@@ -196,3 +196,64 @@
 
 .separator { border: 0; border-top: 1px solid $color-border; margin: 1rem 0; }
 .w-100 { width: 100%; }
+
+// scss/components/_cards.scss - Estilos específicos para el Fichero de Clientes
+
+.cliente-item-row {
+  flex-direction: row !important;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.65rem 0.75rem !important; // Densidad idéntica al grid de camiones
+  border-left: 3px solid $color-time-13-16; // Distintivo verde/azul para diferenciar de unidades
+  border-radius: 6px;
+  gap: 0.5rem !important;
+
+  .cliente-data-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    line-height: 1.2;
+
+    .cliente-name-title {
+      color: $color-text-main;
+      font-weight: 600;
+      font-size: 0.88rem;
+    }
+
+    .cliente-sub-text {
+      font-size: 0.75rem;
+      color: $color-text-muted;
+      
+      strong {
+        color: #f8fafc;
+      }
+    }
+  }
+
+  .cliente-actions-trigger {
+    display: flex;
+    gap: 0.4rem;
+
+    button {
+      padding: 0.3rem 0.5rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      border-radius: 4px;
+      cursor: pointer;
+      border: none;
+      transition: $transition-smooth;
+    }
+
+    .btn-edit-inline {
+      background-color: #334155;
+      color: #38bdf8;
+      &:hover { background-color: #475569; }
+    }
+
+    .btn-delete-inline {
+      background-color: rgba(#ef4444, 0.15);
+      color: #ef4444;
+      &:hover { background-color: rgba(#ef4444, 0.3); }
+    }
+  }
+}

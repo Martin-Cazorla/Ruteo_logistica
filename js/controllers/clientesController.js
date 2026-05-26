@@ -13,23 +13,25 @@ import {
 
 export class ClientesController {
     constructor() {
-        // Elementos del formulario reactivo
         this.formCliente = document.getElementById('form-cliente-operativo');
         this.hiddenIdInput = document.getElementById('cliente-id-hidden');
         this.dniInput = document.getElementById('c-dni');
         this.nombreInput = document.getElementById('c-nombre');
         this.telefonoInput = document.getElementById('c-telefono');
         this.direccionInput = document.getElementById('c-direccion');
+        
+        // NUEVOS INPUTS BOOLEANOS DE HISTORIAL TÁCTICO
+        this.checkPremium = document.getElementById('c-is-premium');
+        this.checkCritico = document.getElementById('c-is-critico');
+
         this.btnSubmit = document.getElementById('btn-guardar-cliente');
         this.btnCancel = document.getElementById('btn-cancelar-edicion');
 
-        // Elementos del visor del fichero
         this.searchBox = document.getElementById('search-cliente');
         this.listadoContainer = document.getElementById('listado-master-clientes');
 
-        // Estados volátiles de control interno
         this.unsubscribeClientes = null;
-        this.cacheClientesList = []; // Copia local para filtros rápidos sin re-consultar la red
+        this.cacheClientesList = []; 
     }
 
     init() {
@@ -42,7 +44,6 @@ export class ClientesController {
     escucharFicheroClientes() {
         if (!this.listadoContainer) return;
 
-        // Escucha activa en tiempo real sobre la colección raíz de clientes
         const q = query(collection(db, "clientes"));
 
         this.unsubscribeClientes = onSnapshot(q, (snapshot) => {
@@ -55,7 +56,6 @@ export class ClientesController {
                 });
             });
 
-            // Renderizado inicial con la lista limpia devuelta por Firestore
             this.renderClientes(this.cacheClientesList);
         });
     }
@@ -69,7 +69,6 @@ export class ClientesController {
             return;
         }
 
-        // Mapeo seguro utilizando sanitización estricta anti-XSS
         this.listadoContainer.innerHTML = lista.map(c => {
             const idSeguro = Sanitizer.escapeHTML(c.id);
             const dniSeguro = Sanitizer.escapeHTML(c.dni);
@@ -77,15 +76,34 @@ export class ClientesController {
             const telSeguro = Sanitizer.escapeHTML(c.telefono);
             const dirSeguro = Sanitizer.escapeHTML(c.direccion);
 
+            // Resguardo booleano estricto por si migran datos viejos sin clasificar
+            const esPremium = !!c.isPremium;
+            const esCritico = !!c.isCritico;
+
+            // Inyección condicional de badges tácticos en la ficha resumida
+            let badgesHTML = "";
+            if (esPremium) badgesHTML += `<span class="badge-tag-cliente badge-tag-cliente--premium">⭐ PREMIUM</span>`;
+            if (esCritico) badgesHTML += `<span class="badge-tag-cliente badge-tag-cliente--critico">⚠️ CRÍTICO</span>`;
+
             return `
                 <div class="card-panel cliente-item-row" data-id="${idSeguro}">
                     <div class="cliente-data-info">
-                        <span class="cliente-name-title">${nomSeguro}</span>
+                        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                            <span class="cliente-name-title">${nomSeguro}</span>
+                            ${badgesHTML}
+                        </div>
                         <span class="cliente-sub-text">DNI: <strong>${dniSeguro}</strong> | Tel: ${telSeguro}</span>
                         <span class="cliente-sub-text">Dir: <em>${dirSeguro}</em></span>
                     </div>
                     <div class="cliente-actions-trigger">
-                        <button class="btn-edit-inline" data-id="${idSeguro}" data-dni="${dniSeguro}" data-nombre="${nomSeguro}" data-telefono="${telSeguro}" data-direccion="${dirSeguro}">Editar</button>
+                        <button class="btn-edit-inline" 
+                                data-id="${idSeguro}" 
+                                data-dni="${dniSeguro}" 
+                                data-nombre="${nomSeguro}" 
+                                data-telefono="${telSeguro}" 
+                                data-direccion="${dirSeguro}"
+                                data-premium="${esPremium}"
+                                data-critico="${esCritico}">Editar</button>
                         <button class="btn-delete-inline" data-id="${idSeguro}">Remover</button>
                     </div>
                 </div>
@@ -96,34 +114,33 @@ export class ClientesController {
     }
 
     vincularEventosInteractivosFichero() {
-        // Manejador reactivo para eliminación física de registros
         this.listadoContainer.querySelectorAll('.btn-delete-inline').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const id = e.target.getAttribute('data-id');
                 if (confirm("⚠️ ¿Dar de baja definitiva a este cliente de la base de datos maestro?")) {
                     await deleteDoc(doc(db, "clientes", id));
-                    this.limpiarFormulario(); // Si justo lo estaba editando, limpia el estado
+                    this.limpiarFormulario();
                 }
             });
         });
 
-        // Manejador reactivo para subida de datos al formulario (Modo Edición)
         this.listadoContainer.querySelectorAll('.btn-edit-inline').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const b = e.target;
                 
-                // Cargamos el estado volátil en el DOM
                 this.hiddenIdInput.value = b.getAttribute('data-id');
                 this.dniInput.value = b.getAttribute('data-dni');
                 this.nombreInput.value = b.getAttribute('data-nombre');
                 this.telefonoInput.value = b.getAttribute('data-telefono');
                 this.direccionInput.value = b.getAttribute('data-direccion');
 
-                // Cambio estético del botón de control para reflejar edición
+                // Mapeo inverso de los checkboxes booleanos al entrar en edición
+                this.checkPremium.checked = b.getAttribute('data-premium') === 'true';
+                this.checkCritico.checked = b.getAttribute('data-critico') === 'true';
+
                 this.btnSubmit.textContent = "Actualizar Datos Cliente";
                 this.btnCancel.style.display = "inline-block";
                 
-                // Foco de accesibilidad directo al input de inicio
                 this.nombreInput.focus();
             });
         });
@@ -138,18 +155,19 @@ export class ClientesController {
                 dni: this.dniInput.value.trim(),
                 nombre: this.nombreInput.value.trim(),
                 telefono: this.telefonoInput.value.trim(),
-                direccion: this.direccionInput.value.trim()
+                direccion: this.direccionInput.value.trim(),
+                // Inyección nativa de las banderas booleanas seleccionadas en el formulario
+                isPremium: this.checkPremium.checked,
+                isCritico: this.checkCritico.checked
             };
 
             try {
                 if (clienteId) {
-                    // MODO EDICIÓN: Actualización dirigida sobre el ID existente
                     await updateDoc(doc(db, "clientes", clienteId), payloadData);
-                    alert("¡Registro de cliente actualizado correctamente!");
+                    alert("¡Registro de cliente actualizado con segmentación operativa!");
                 } else {
-                    // MODO ALTA: Inyección de nuevo documento en la colección raíz
                     await addDoc(collection(db, "clientes"), payloadData);
-                    alert("¡Nuevo cliente registrado con éxito en el Fichero Maestro!");
+                    alert("¡Nuevo cliente registrado con éxito con perfil logístico!");
                 }
 
                 this.limpiarFormulario();
@@ -162,7 +180,6 @@ export class ClientesController {
     setupSearchFilterListener() {
         if (!this.searchBox) return;
 
-        // Filtro local inmediato para una experiencia de usuario ultra veloz sin latencia de red
         this.searchBox.addEventListener('input', (e) => {
             const termino = e.target.value.trim().toLowerCase();
 
@@ -189,12 +206,13 @@ export class ClientesController {
     limpiarFormulario() {
         this.formCliente.reset();
         this.hiddenIdInput.value = "";
+        this.checkPremium.checked = false;
+        this.checkCritico.checked = false;
         this.btnSubmit.textContent = "Guardar Cliente en Base";
         this.btnCancel.style.display = "none";
     }
 }
 
-// Inicialización automática al cargar la vista
 document.addEventListener('DOMContentLoaded', () => {
     const clientesCtrl = new ClientesController();
     clientesCtrl.init();

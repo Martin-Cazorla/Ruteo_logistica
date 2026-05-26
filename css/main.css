@@ -750,6 +750,27 @@
   background-color: rgba(239, 68, 68, 0.3);
 }
 
+.cliente-item-row .badge-tag-cliente {
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  letter-spacing: 0.3px;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+.cliente-item-row .badge-tag-cliente--premium {
+  background-color: rgba(234, 179, 8, 0.15);
+  border: 1px solid rgba(234, 179, 8, 0.4);
+  color: #fde047;
+}
+.cliente-item-row .badge-tag-cliente--critico {
+  background-color: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+}
+
 .dashboard-container {
   padding: 2rem;
   background-color: #0f172a;

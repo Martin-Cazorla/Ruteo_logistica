@@ -257,3 +257,33 @@
     }
   }
 }
+
+// scss/components/_cards.scss - Modificadores de etiquetas micro de clientes
+
+.cliente-item-row {
+  // ... mantiene tus propiedades anteriores intactas
+  
+  // ETIQUETAS DE CLASIFICACIÓN LOGÍSTICA COMPACTAS
+  .badge-tag-cliente {
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    letter-spacing: 0.3px;
+    display: inline-flex;
+    align-items: center;
+    line-height: 1;
+
+    &--premium {
+      background-color: rgba(#eab308, 0.15);
+      border: 1px solid rgba(#eab308, 0.4);
+      color: #fde047;
+    }
+
+    &--critico {
+      background-color: rgba(#ef4444, 0.15);
+      border: 1px solid rgba(#ef4444, 0.4);
+      color: #fca5a5;
+    }
+  }
+}

@@ -51,7 +51,21 @@
                         <input type="text" id="c-direccion" class="select-field" placeholder="Calle, Altura, Localidad (Martinez)" required autocomplete="off">
                     </div>
 
-                    <div class="action-buttons-group" style="display: flex; gap: 0.75rem; margin-top: 0.5rem;">
+                    <div class="form-group group-segmentacion-tactica" style="display: flex; flex-direction: column; gap: 0.65rem; background-color: #1e293b; padding: 0.75rem; border-radius: 6px; border: 1px solid #334155; margin-top: 0.25rem;">
+                        <span style="font-size: 0.8rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Segmentación de Cuenta:</span>
+                        
+                        <label class="checkbox-row" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.85rem; color: #f8fafc; font-weight: 600;">
+                            <input type="checkbox" id="c-is-premium" style="width: 16px; height: 16px; accent-color: #eab308;">
+                            <span>⭐ Cuenta Cliente Premium (Alta Prioridad / Corporativo)</span>
+                        </label>
+
+                        <label class="checkbox-row" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.85rem; color: #f8fafc; font-weight: 600;">
+                            <input type="checkbox" id="c-is-critico" style="width: 16px; height: 16px; accent-color: #ef4444;">
+                            <span>⚠️ Cuenta Cliente Crítico (Historial de Reclamos / Faltantes)</span>
+                        </label>
+                    </div>
+
+                    <div class="action-buttons-group" style="display: flex; gap: 0.75rem; margin-top: 0.75rem;">
                         <button type="submit" id="btn-guardar-cliente" class="btn-primary w-100">Guardar Cliente en Base</button>
                         <button type="button" id="btn-cancelar-edicion" class="btn-secondary" style="display: none;">Cancelar</button>
                     </div>

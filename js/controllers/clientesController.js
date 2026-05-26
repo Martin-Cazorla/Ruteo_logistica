@@ -20,7 +20,7 @@ export class ClientesController {
         this.telefonoInput = document.getElementById('c-telefono');
         this.direccionInput = document.getElementById('c-direccion');
         
-        // NUEVOS INPUTS BOOLEANOS DE HISTORIAL TÁCTICO
+        // INPUTS BOOLEANOS DE HISTORIAL TÁCTICO
         this.checkPremium = document.getElementById('c-is-premium');
         this.checkCritico = document.getElementById('c-is-critico');
 
@@ -76,17 +76,22 @@ export class ClientesController {
             const telSeguro = Sanitizer.escapeHTML(c.telefono);
             const dirSeguro = Sanitizer.escapeHTML(c.direccion);
 
-            // Resguardo booleano estricto por si migran datos viejos sin clasificar
+            // Resguardo estricto ante valores nulos o indefinidos de la base de datos
             const esPremium = !!c.isPremium;
             const esCritico = !!c.isCritico;
 
-            // Inyección condicional de badges tácticos en la ficha resumida
+            // DETERMINACIÓN EN CALIENTE DE CLASES CSS DE SEGMENTACIÓN VISUAL
+            let claseVarianteTarjeta = "";
+            if (esCritico) claseVarianteTarjeta += " cliente-item-row--critico";
+            if (esPremium) claseVarianteTarjeta += " cliente-item-row--premium";
+
+            // Inyección condicional de badges de texto compactos
             let badgesHTML = "";
             if (esPremium) badgesHTML += `<span class="badge-tag-cliente badge-tag-cliente--premium">⭐ PREMIUM</span>`;
             if (esCritico) badgesHTML += `<span class="badge-tag-cliente badge-tag-cliente--critico">⚠️ CRÍTICO</span>`;
 
             return `
-                <div class="card-panel cliente-item-row" data-id="${idSeguro}">
+                <div class="card-panel cliente-item-row${claseVarianteTarjeta}" data-id="${idSeguro}">
                     <div class="cliente-data-info">
                         <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
                             <span class="cliente-name-title">${nomSeguro}</span>
@@ -156,7 +161,6 @@ export class ClientesController {
                 nombre: this.nombreInput.value.trim(),
                 telefono: this.telefonoInput.value.trim(),
                 direccion: this.direccionInput.value.trim(),
-                // Inyección nativa de las banderas booleanas seleccionadas en el formulario
                 isPremium: this.checkPremium.checked,
                 isCritico: this.checkCritico.checked
             };

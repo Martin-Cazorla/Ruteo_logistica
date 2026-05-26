@@ -19,7 +19,7 @@
   }
 }
 
-// ARQUITECTURA INTEGRADA DE TARJETA COMPACTA DE ALTA DENSIDAD
+// ARQUITECTURA INTEGRADA DE TARJETA COMPACTA DE ALTA DENSIDAD (UNIDADES)
 .card-unidad-tactica {
   padding: 0.65rem 0.75rem; 
   min-height: auto; 
@@ -29,9 +29,6 @@
   overflow: hidden;
   transition: $transition-smooth;
 
-  // ALERTA DE JORNADA CUMPLIDA (Verde translúcido cruzado de fondo)
-  // scss/components/_cards.scss - Fragmento de .card-unidad-tactica
-  
   // ALERTA DE JORNADA CUMPLIDA (Cruzado al frente de forma estética)
   .sello-jornada-cumplida {
     position: absolute;
@@ -45,7 +42,7 @@
     white-space: nowrap;
     pointer-events: none; // CRÍTICO: Permite hacer clic en los botones de abajo sin obstrucción
     user-select: none;
-    z-index: 20; // CORREGIDO: Se eleva sobre los botones (z-index: 10) para no quedar detrás
+    z-index: 20; // SE ELEVA SOBRE LOS BOTONES: Evita quedar oculto detrás
     text-shadow: 0 0 10px rgba(#000, 0.8); // Sombra de alta definición para legibilidad
   }
 
@@ -197,16 +194,40 @@
 .separator { border: 0; border-top: 1px solid $color-border; margin: 1rem 0; }
 .w-100 { width: 100%; }
 
-// scss/components/_cards.scss - Estilos específicos para el Fichero de Clientes
-
+// ==========================================================================
+// ARQUITECTURA DEL FICHERO DE CLIENTES CON VARIACIÓN CROMÁTICA REACTIVA
+// ==========================================================================
 .cliente-item-row {
+  display: flex;
   flex-direction: row !important;
   justify-content: space-between;
   align-items: center;
   padding: 0.65rem 0.75rem !important; // Densidad idéntica al grid de camiones
-  border-left: 3px solid $color-time-13-16; // Distintivo verde/azul para diferenciar de unidades
+  border-left: 3px solid $color-border; // Borde neutro base
+  background-color: $color-bg-card;
   border-radius: 6px;
   gap: 0.5rem !important;
+  transition: $transition-smooth;
+
+  // VARIANTE 1: TARJETA DE CLIENTE CRÍTICO 🔥 (Fondo rojizo de advertencia)
+  &.cliente-item-row--critico {
+    background-color: #2a1b1f; // Tono burdeos oscuro logístico
+    border-left: 4px solid #ef4444; // Resaltado rojo rígido
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.1);
+  }
+
+  // VARIANTE 2: TARJETA DE CLIENTE PREMIUM ⭐ (Fondo azul/acero corporativo)
+  &.cliente-item-row--premium {
+    background-color: #1e252f; // Tono azul noche distinguido
+    border-left: 4px solid #eab308; // Resaltado oro premium
+    box-shadow: 0 0 10px rgba(234, 179, 8, 0.1);
+  }
+
+  // VARIANTE 3: CASO HÍBRIDO EXCEPCIONAL (Ambas clasificaciones activas a la vez)
+  &.cliente-item-row--critico.cliente-item-row--premium {
+    background-color: #242028; // Tono amatista oscuro de máxima atención
+    border-left: 4px solid #a855f7; // Resaltado violeta
+  }
 
   .cliente-data-info {
     display: flex;
@@ -256,14 +277,8 @@
       &:hover { background-color: rgba(#ef4444, 0.3); }
     }
   }
-}
 
-// scss/components/_cards.scss - Modificadores de etiquetas micro de clientes
-
-.cliente-item-row {
-  // ... mantiene tus propiedades anteriores intactas
-  
-  // ETIQUETAS DE CLASIFICACIÓN LOGÍSTICA COMPACTAS
+  // ETIQUETAS DE CLASIFICACIÓN LOGÍSTICA MICRO (BADGES)
   .badge-tag-cliente {
     font-size: 0.65rem;
     font-weight: 800;

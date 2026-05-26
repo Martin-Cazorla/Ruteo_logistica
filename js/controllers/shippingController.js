@@ -18,8 +18,10 @@ export class ShippingController {
         this.mapModule = null;
         this.filterSelect = null;
         this.sidebarContainer = null;
+        
+        // NUEVO ACCESO AL FILTRO DE CALENDARIO DEL MAPA
+        this.mapDateFilter = document.getElementById('map-date-filter');
 
-        // ELEMENTOS DEL NUEVO COMPONENTE DIALOG DE DESPACHO MULTIPLE
         this.dialogAsignacion = document.getElementById('modal-asignacion-flota');
         this.loteCantidadDisplay = document.getElementById('modal-lote-cantidad');
         this.selectTransporteLote = document.getElementById('select-transporte-lote');
@@ -27,13 +29,19 @@ export class ShippingController {
         this.btnCancelarLote = document.getElementById('btn-cancelar-lote');
         this.btnCloseX = document.getElementById('btn-close-assignment-dialog');
 
-        // Estado interno volátil del controlador de mapas
         this.loteIdsSeleccionados = [];
+        this.unsubscribePedidos = null; // Guardado de canal activo
     }
 
     init() {
         this.filterSelect = document.getElementById('filter-franja');
         this.sidebarContainer = document.getElementById('pedidos-list-append');
+
+        // Seteo inicial por defecto del calendario a la jornada actual
+        if (this.mapDateFilter) {
+            this.mapDateFilter.value = new Date().toISOString().split('T')[0];
+            this.mapDateFilter.addEventListener('change', () => this.sincronizarMapaPorFecha());
+        }
 
         if (!this.mapModule) {
             try {
@@ -48,17 +56,25 @@ export class ShippingController {
         store.subscribe((state) => this.render(state));
         this.setupEventListeners();
         this.setupDialogListeners();
-        this.conectarPedidosFirestore();
+        this.sincronizarMapaPorFecha(); // Disparo inicial con el canal unificado
     }
 
-    conectarPedidosFirestore() {
-        const fechaHoy = new Date().toISOString().split('T')[0];
-        const q = query(collection(db, "pedidos"), where("fecha_creacion", "==", fechaHoy));
+    sincronizarMapaPorFecha() {
+        if (!this.mapDateFilter) return;
+        const fechaSeleccionada = this.mapDateFilter.value;
+        
+        // Limpiamos subscripción anterior para evitar solapamientos visuales de días diferentes
+        if (this.unsubscribePedidos) this.unsubscribePedidos();
+        this.conectarPedidosFirestore(fechaSeleccionada);
+    }
 
-        onSnapshot(q, async (snapshot) => {
+    conectarPedidosFirestore(fechaTarget) {
+        // Consultamos dinámicamente según la fecha seleccionada en la cabecera del mapa
+        const q = query(collection(db, "pedidos"), where("fecha_creacion", "==", fechaTarget));
+
+        this.unsubscribePedidos = onSnapshot(q, async (snapshot) => {
             const pedidosData = [];
 
-            // CROSS-SEARCHING LOGÍSTICO: Traemos los clientes marcados del fichero para acoplar alertas en caliente
             const clientesSnap = await getDocs(collection(db, "clientes"));
             const mapClientesCriticos = new Map();
             const mapClientesPremium = new Map();
@@ -75,11 +91,8 @@ export class ShippingController {
                 const data = docSnap.data();
                 const dniClienteLimpio = data.dni_cliente ? String(data.dni_cliente).trim() : '';
 
-                // El pedido hereda en caliente la condición táctica fijada en la ficha base del cliente
                 const esClienteCriticoBase = mapClientesCriticos.get(dniClienteLimpio) || false;
                 const esClientePremiumBase = mapClientesPremium.get(dniClienteLimpio) || false;
-
-                // Si ya venía marcado como crítico por el formulario de reclamos, sostiene la prioridad alta
                 const determinarCriticidad = data.esCritico || esClienteCriticoBase;
 
                 pedidosData.push({
@@ -88,7 +101,7 @@ export class ShippingController {
                     franjaHoraria: data.franjaHoraria || '10:00-14:00',
                     importe: data.importe || 0,
                     esCritico: determinarCriticidad,
-                    isPremium: esClientePremiumBase, // Inyección de bandera premium para mutación de pines en mapModule
+                    isPremium: esClientePremiumBase, 
                     motivoCritico: data.motivoCritico || (esClienteCriticoBase ? 'Cliente clasificado como CRÍTICO en Fichero Base' : ''),
                     numeroPedido: data.numero_pedido || 'S/N',
                     internoAsignado: data.interno_asignado || null,
@@ -105,7 +118,7 @@ export class ShippingController {
                 pedidos: pedidosData
             });
         }, (error) => {
-            console.error("Fallo crítico en el canal de datos de transporte: ", error);
+            console.error("Fallo crítico en el canal de datos: ", error);
         });
     }
 
@@ -114,7 +127,7 @@ export class ShippingController {
 
         this.filterSelect.addEventListener('change', (e) => {
             const currentStore = store.getState();
-            const filtrosActuales = currentStore.filtros || { fecha: new Date().toISOString().split('T')[0], franjaHoraria: 'all' };
+            const filtrosActuales = currentStore.filtros || { franjaHoraria: 'all' };
 
             store.setState({
                 ...currentStore,
@@ -123,43 +136,30 @@ export class ShippingController {
         });
     }
 
-    // ==========================================================================
-    // ESCUCHADORES MÓDULO DIALOG DE GESTIÓN DE DESPACHOS MASIVOS
-    // ==========================================================================
     setupDialogListeners() {
         if (!this.dialogAsignacion) return;
-
         const cerrarModal = () => this.dialogAsignacion.close();
         this.btnCloseX.addEventListener('click', cerrarModal);
         this.btnCancelarLote.addEventListener('click', cerrarModal);
 
-        // Inyección masiva optimizada por lotes atómicos (Firestore Batches)
         this.btnConfirmarLote.addEventListener('click', async () => {
             if (this.loteIdsSeleccionados.length === 0) return;
-            
             const internoElegido = this.selectTransporteLote.value;
             if (!internoElegido) {
-                alert("❌ Por favor, seleccione una unidad de transporte válida.");
+                alert("❌ Seleccione una unidad válida.");
                 return;
             }
 
             try {
                 const batch = writeBatch(db);
-                
-                // Iteramos sobre las órdenes del lazo del mapa adjudicándoles el camión seleccionado
                 this.loteIdsSeleccionados.forEach(pedidoId => {
-                    const pedidoRef = doc(db, "pedidos", pedidoId);
-                    batch.update(pedidoRef, {
-                        interno_asignado: internoElegido
-                    });
+                    batch.update(doc(db, "pedidos", pedidoId), { interno_asignado: internoElegido });
                 });
-
-                await batch.commit(); // Ejecución en un único viaje de red (Garantiza atomicidad técnica)
-                alert(`¡Lote de ${this.loteIdsSeleccionados.length} pedidos asignado con éxito al Interno #${internoElegido}!`);
+                await batch.commit();
+                alert(`¡Lote asignado con éxito al Interno #${internoElegido}!`);
                 this.dialogAsignacion.close();
             } catch (err) {
-                console.error("Fallo crítico en el procesamiento por lote atómico:", err);
-                alert("Error de red al intentar despachar el lote.");
+                console.error(err);
             }
         });
     }
@@ -168,7 +168,6 @@ export class ShippingController {
         const pedidos = state?.pedidos || [];
         const filtros = state?.filtros || { franjaHoraria: 'all' };
 
-        // Filtrado de pedidos: Solo mostramos los que no tienen un camión asignado aún
         const pedidosFiltrados = pedidos.filter(pedido => {
             const cumpleFranja = filtros.franjaHoraria === 'all' || pedido.franjaHoraria === filtros.franjaHoraria;
             const estaDisponible = !pedido.internoAsignado; 
@@ -184,13 +183,8 @@ export class ShippingController {
 
     renderListSidebar(pedidos) {
         if (!this.sidebarContainer) return;
-        
         if (pedidos.length === 0) {
-            this.sidebarContainer.innerHTML = `
-                <div style="color: #94a3b8; text-align: center; padding: 2rem; font-size: 0.9rem;">
-                    No hay pedidos disponibles para asignar en esta franja.
-                </div>
-            `;
+            this.sidebarContainer.innerHTML = `<div style="color: #94a3b8; text-align: center; padding: 2rem; font-size: 0.9rem;">No hay pedidos disponibles para asignar.</div>`;
             return;
         }
 
@@ -199,9 +193,7 @@ export class ShippingController {
             const importeSeguro = parseFloat(p.importe).toLocaleString('es-AR', { minimumFractionDigits: 2 });
             const franjaClass = this._getClassPorFranja(p.franjaHoraria);
 
-            // Inyectamos dinámicamente variaciones visuales en las filas si la cuenta base es crítica o premium
-            let claseAlertaFila = "";
-            let iconoTag = "";
+            let claseAlertaFila = ""; let iconoTag = "";
             if (p.esCritico) { claseAlertaFila = " order-item--critical-alert"; iconoTag = "🔥 "; }
             else if (p.isPremium) { claseAlertaFila = " order-item--premium-alert"; iconoTag = "⭐ "; }
 
@@ -229,31 +221,21 @@ export class ShippingController {
         }
     }
 
-    // ==========================================================================
-    // PROCESADOR REACTIVO: CAPTURA LOS PEDIDOS DEL LAZO Y ABRE LA INTERFAZ DIALOG
-    // ==========================================================================
     async handleMassAssignment(selectedIds) {
         if (!selectedIds || selectedIds.length === 0) return;
-        
         this.loteIdsSeleccionados = selectedIds;
         this.loteCantidadDisplay.textContent = selectedIds.length;
 
         try {
-            // Consultamos en caliente la flota maestra configurada estable para llenar el selector
             const flotaSnap = await getDocs(collection(db, "flota_maestra"));
             let optionsHtml = '<option value="">-- Seleccione Unidad de Destino --</option>';
-            
             flotaSnap.forEach(docSnap => {
                 const f = docSnap.data();
-                optionsHtml += `<option value="${Sanitizer.escapeHTML(docSnap.id)}">Interno #${Sanitizer.escapeHTML(docSnap.id)} - ${Sanitizer.escapeHTML(f.chofer)} (${Sanitizer.escapeHTML(f.tamanio)})</option>`;
+                optionsHtml += `<option value="${Sanitizer.escapeHTML(docSnap.id)}">Interno #${Sanitizer.escapeHTML(docSnap.id)} - ${Sanitizer.escapeHTML(f.chofer)}</option>`;
             });
-
             this.selectTransporteLote.innerHTML = optionsHtml;
-            this.dialogAsignacion.showModal(); // Apertura controlada nativa de HTML5
-            
-        } catch (err) {
-            console.error("Fallo relacional al leer flota_maestra para el lote:", err);
-        }
+            this.dialogAsignacion.showModal();
+        } catch (err) { console.error(err); }
     }
 }
 

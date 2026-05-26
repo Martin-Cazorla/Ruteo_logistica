@@ -17,32 +17,28 @@ import {
 
 export class DashboardController {
     constructor() {
-        // Contenedores principales e inputs de la cabecera
         this.globalDateFilter = document.getElementById('global-date-filter');
         this.unidadesSeccionesContainer = document.getElementById('unidades-secciones-container');
         
         this.inputExpressUnidad = document.getElementById('input-express-unidad');
         this.selectExpressIngreso = document.getElementById('select-express-ingreso');
 
-        // Contadores superiores de control (KPI de jornada)
         this.countTotal = document.getElementById('count-total');
         this.countDisp = document.getElementById('count-disp');
         this.countExtra = document.getElementById('count-extra');
 
-        // Modulos de carga masiva por planillas Jumbo
         this.excelInput = document.getElementById('excel-file');
         this.fileNameDisplay = document.getElementById('file-name-display');
         this.btnProcesar = document.getElementById('btn-procesar-carga');
         this.listadoPedidosContainer = document.getElementById('listado-pedidos');
 
-        // Gestión reactiva de reclamos críticos
         this.formReclamo = document.getElementById('form-reclamo');
         this.recDniInput = document.getElementById('rec-dni');
         this.recDireccionSelect = document.getElementById('rec-direccion');
         this.recClienteStatus = document.getElementById('rec-cliente-status');
         this.listadoReclamosContainer = document.getElementById('listado-reclamos');
 
-        // Modal base tradicional de creación manual
+        // Formulario manual del modal
         this.modalPedido = document.getElementById('modal-pedido');
         this.formManualPedido = document.getElementById('form-manual-pedido');
         this.pDniInput = document.getElementById('p-dni');
@@ -50,7 +46,6 @@ export class DashboardController {
         this.pDireccionSelectGroup = document.getElementById('domicilios-select-group');
         this.pDireccionNueva = document.getElementById('p-direccion-nueva');
 
-        // Vinculación del componente Dialog de auditoría
         this.dialogGestion = document.getElementById('modal-gestion-unidad');
         this.dialogInternoDisplay = document.getElementById('modal-interno-display');
         this.dialogNotesArea = document.getElementById('modal-notes-area');
@@ -59,7 +54,6 @@ export class DashboardController {
         this.btnFinalizeUnit = document.getElementById('btn-finalizar-jornada-unidad');
         this.btnCloseDialog = document.getElementById('btn-close-gestion-dialog');
 
-        // Estado interno volátil del controlador
         this.activeUnitIdForDialog = null; 
         this.pedidosCargadosExcel = [];
         this.unsubscribeUnidades = null;
@@ -67,6 +61,9 @@ export class DashboardController {
         this.unsubscribeReclamos = null;
         
         this.franjasHorariasValidas = ["09:00 hs", "10:00 hs", "11:00 hs", "Electro", "Ausente"];
+
+        // NUEVO ATRIBUTO DE CONTROL DE EDICIÓN DE ORDEN MANUAL
+        this.pedidoIdEnEdicion = null;
     }
 
     init() {
@@ -129,7 +126,14 @@ export class DashboardController {
         const btnOpenPedido = document.getElementById('btn-manual-pedido-modal');
         const closeButtons = document.querySelectorAll('.btn-close-modal');
 
-        if (btnOpenPedido) btnOpenPedido.addEventListener('click', () => this.toggleModal(this.modalPedido, true));
+        if (btnOpenPedido) {
+            btnOpenPedido.addEventListener('click', () => {
+                this.pedidoIdEnEdicion = null; // Reinicia el flag para asegurar modo ALTA
+                this.formManualPedido.reset();
+                this.formManualPedido.querySelector('button[type="submit"]').textContent = "Inyectar Pedido Manual";
+                this.toggleModal(this.modalPedido, true);
+            });
+        }
 
         closeButtons.forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -311,37 +315,24 @@ export class DashboardController {
         });
     }
 
-    // ==========================================================================
-    // NUEVO CONTROLADOR DE RED NATIVO: ACCESO GEOGRÁFICO DE NOMINATIM OPENSTREETMAP
-    // ==========================================================================
     async _geocodificarDireccionAsync(direccionTexto) {
-        // Marcamos un recuadro restrictivo de búsqueda (Bounded Box) enfocado sobre Buenos Aires
-        // para evitar que devuelva esquinas homónimas en otros países o provincias
-        const urlApi = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(direccionTexto)}&limit=1`;
-        
-        try {
-            const respuesta = await fetch(urlApi, {
-                headers: { 'User-Agent': 'Martinez-Routing-Application-v2' } // Requerido por las políticas de Nominatim
-            });
-            const dataJson = await respuesta.json();
-
-            if (dataJson && dataJson.length > 0) {
-                return {
-                    lat: parseFloat(dataJson[0].lat),
-                    lng: parseFloat(dataJson[0].lon)
-                };
-            }
-        } catch (err) {
-            console.error("Fallo de red en la pasarela de Nominatim: ", err);
+        if (!direccionTexto) return { lat: -34.4824, lng: -58.5032 };
+        let queryLimpia = direccionTexto.trim();
+        if (!queryLimpia.toLowerCase().includes("buenos aires")) {
+            queryLimpia += ", Buenos Aires, Argentina";
         }
-        
-        // Retorno de contingencia si no se halla la altura exacta (Evita pin nulo)
+
+        const urlApi = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryLimpia)}&limit=1`;
+        try {
+            const respuesta = await fetch(urlApi, { headers: { 'User-Agent': 'Martinez-Routing-Application-v2.5' } });
+            const dataJson = await respuesta.json();
+            if (dataJson && dataJson.length > 0) {
+                return { lat: parseFloat(dataJson[0].lat), lng: parseFloat(dataJson[0].lon) };
+            }
+        } catch (err) { console.error(err); }
         return { lat: -34.4824, lng: -58.5032 }; 
     }
 
-    // ==========================================================================
-    // LÓGICA DE INYECCIÓN MASIVA MEDIANTE EXCEL INTERACTIVO
-    // ==========================================================================
     setupExcelEventListeners() {
         if (!this.excelInput) return;
 
@@ -356,7 +347,7 @@ export class DashboardController {
             } catch (err) {
                 this.btnProcesar.disabled = true;
                 this.pedidosCargadosExcel = [];
-                alert("❌ Error estructural al leer el layout del Excel.");
+                alert("❌ Error estructural en Excel.");
             }
         });
 
@@ -364,39 +355,31 @@ export class DashboardController {
             this.btnProcesar.addEventListener('click', async () => {
                 if (this.pedidosCargadosExcel.length === 0) return;
                 this.btnProcesar.disabled = true;
-                this.btnProcesar.textContent = "Geolocalizando lote de pedidos...";
+                this.btnProcesar.textContent = "Geolocalizando lote...";
 
                 try {
                     const fechaActualBarra = this.globalDateFilter.value;
                     const pedidosEstructurados = [];
 
-                    // Iteramos resolviendo la latitud/longitud real para cada fila del Excel
                     for (const p of this.pedidosCargadosExcel) {
                         const dirDeCarga = p.direccion_entrega || '';
-                        
-                        // Si la dirección no trae coordenadas fijas del Parser, la resolvemos vía API
-                        const coordReal = (p.coordenada && p.coordenada.lat) 
-                            ? p.coordenada 
-                            : await this._geocodificarDireccionAsync(dirDeCarga);
+                        const coordReal = (p.coordenada && p.coordenada.lat) ? p.coordenada : await this._geocodificarDireccionAsync(dirDeCarga);
 
                         pedidosEstructurados.push({
                             ...p,
                             coordenada: coordReal,
                             fecha_creacion: fechaActualBarra
                         });
-                        
-                        // Sutil retraso de tiempo para no saturar el servidor libre de OpenStreetMap (Debounce técnico)
                         await new Promise(resolve => setTimeout(resolve, 600));
                     }
 
                     await DatabaseService.guardarPedidosMasivos(pedidosEstructurados);
-                    alert(`🚀 ¡Inyección masiva completada! ${pedidosEstructurados.length} órdenes geolocalizadas y guardadas.`);
+                    alert(`🚀 ¡Inyección masiva completada! ${pedidosEstructurados.length} órdenes guardadas.`);
                     this.pedidosCargadosExcel = [];
                     this.excelInput.value = "";
                     this.fileNameDisplay.textContent = "Ningún archivo seleccionado";
-                } catch (err) {
-                    console.error("Error en inyección masiva:", err);
-                } finally {
+                } catch (err) { console.error(err); }
+                finally {
                     this.btnProcesar.disabled = false;
                     this.btnProcesar.textContent = "Iniciar Inyección a Firestore";
                 }
@@ -405,7 +388,7 @@ export class DashboardController {
     }
 
     // ==========================================================================
-    // LÓGICA DE PROCESAMIENTO Y ENVÍO DE FORMULARIO MANUAL
+    // FORMULARIO MANUAL: CAPAZ DE AGREGAR O ACTUALIZAR SEGÚN CORRESPONDA
     // ==========================================================================
     setupManualOrderFormListener() {
         if (!this.formManualPedido) return;
@@ -414,16 +397,13 @@ export class DashboardController {
             e.preventDefault();
 
             const usarDireccionSelect = this.pDireccionSelectGroup.style.display === "block";
-            const direccionFinal = usarDireccionSelect 
-                ? this.pDireccionSelect.value 
-                : this.pDireccionNueva.value.trim();
+            const direccionFinal = usarDireccionSelect ? this.pDireccionSelect.value : this.pDireccionNueva.value.trim();
 
             if (!direccionFinal) {
-                alert("⚠️ Por favor, especifique un domicilio de entrega.");
+                alert("⚠️ Especifique un domicilio.");
                 return;
             }
 
-            // MODIFICACIÓN CRÍTICA: Llamado dinámico a la API para resolver la dirección real digitada
             const coordRealSetteada = await this._geocodificarDireccionAsync(direccionFinal);
 
             const dataManualOrder = {
@@ -432,21 +412,28 @@ export class DashboardController {
                 importe: parseFloat(document.getElementById('p-importe').value),
                 franjaHoraria: document.getElementById('p-franja').value,
                 direccion_entrega: direccionFinal,
-                coordenada: coordRealSetteada, // Inyección de geolocalización real precisa
-                fecha_creacion: this.globalDateFilter.value,
-                esCritico: false,
-                interno_asignado: null 
+                coordenada: coordRealSetteada, 
+                fecha_creacion: this.globalDateFilter.value
             };
 
             try {
-                await addDoc(collection(db, "pedidos"), dataManualOrder);
-                alert(`✅ Orden #${dataManualOrder.numero_pedido} inyectada y mapeada correctamente en la calle.`);
+                if (this.pedidoIdEnEdicion) {
+                    // MODO EDICIÓN: Actualización asincrónica dirigida sobre el pedido existente
+                    await updateDoc(doc(db, "pedidos", this.pedidoIdEnEdicion), dataManualOrder);
+                    alert(`¡Orden #${dataManualOrder.numero_pedido} modificada con éxito!`);
+                } else {
+                    // MODO ALTA: Inyección estándar por defecto
+                    dataManualOrder.esCritico = false;
+                    dataManualOrder.interno_asignado = null;
+                    await addDoc(collection(db, "pedidos"), dataManualOrder);
+                    alert(`✅ Orden #${dataManualOrder.numero_pedido} guardada.`);
+                }
+
+                this.pedidoIdEnEdicion = null;
                 this.formManualPedido.reset();
                 this.pDireccionSelectGroup.style.display = "none";
                 this.toggleModal(this.modalPedido, false); 
-            } catch (err) {
-                console.error("Fallo crítico al inyectar pedido manual:", err);
-            }
+            } catch (err) { console.error(err); }
         });
     }
 
@@ -498,21 +485,79 @@ export class DashboardController {
         });
     }
 
+    // ==========================================================================
+    // RENDERIZADOR MAESTRO: INYECTA BOTONES CON DATA-ATTRIBUTES DE EDICIÓN
+    // ==========================================================================
     renderPedidosList(pedidos) {
         this.listadoPedidosContainer.innerHTML = pedidos.map(p => {
             const iconoFuego = p.esCritico ? ' 🔥' : '';
             const numPed = p.numero_pedido || p.numeroPedido || 'S/N';
             const dniCli = p.dni_cliente || 'S/D';
+            const idSeguro = Sanitizer.escapeHTML(p.id);
+            const dirSegura = Sanitizer.escapeHTML(p.direccion_entrega || '');
+            const impSeguro = parseFloat(p.importe || 0);
+            const fraSegura = Sanitizer.escapeHTML(p.franjaHoraria || '10:00-14:00');
+
             return `
-                <div class="card-panel manual-order-item-row ${p.esCritico ? 'order-item--critical' : ''}">
+                <div class="card-panel manual-order-item-row ${p.esCritico ? 'order-item--critical' : ''}" style="display:flex; justify-content:space-between; align-items:center; padding: 0.5rem 0.75rem; gap: 0.5rem;">
                     <div>
                         <strong>Orden: #${Sanitizer.escapeHTML(numPed)}${iconoFuego}</strong><br>
-                        <span class="sub-text-dni">DNI: ${Sanitizer.escapeHTML(dniCli)}</span>
+                        <span class="sub-text-dni" style="font-size:0.75rem; color:#64748b;">DNI: ${Sanitizer.escapeHTML(dniCli)}</span>
                     </div>
-                    <span class="badge badge--info">$${parseFloat(p.importe).toLocaleString('es-AR')}</span>
+                    
+                    <div style="display:flex; align-items:center; gap:0.4rem;">
+                        <span class="badge badge--info" style="font-size:0.72rem;">$${impSeguro.toLocaleString('es-AR')}</span>
+                        
+                        <button class="btn-secondary btn-edit-pedido-inline" style="padding:0.2rem 0.4rem; font-size:0.7rem; background-color:#334155; color:#38bdf8; border:none; border-radius:4px; cursor:pointer;"
+                                data-id="${idSeguro}" data-numero="${Sanitizer.escapeHTML(numPed)}" data-dni="${Sanitizer.escapeHTML(dniCli)}" data-importe="${impSeguro}" data-franja="${fraSegura}" data-direccion="${dirSegura}">
+                            ✏️
+                        </button>
+                        
+                        <button class="btn-danger btn-delete-pedido-inline" style="padding:0.2rem 0.4rem; font-size:0.7rem; background-color:rgba(239,68,68,0.15); color:#ef4444; border:none; border-radius:4px; cursor:pointer;" data-id="${idSeguro}">
+                            ❌
+                        </button>
+                    </div>
                 </div>
             `;
         }).join('') || '<div class="placeholder-vacio-jornada">No hay órdenes cargadas hoy.</div>';
+
+        this.vincularEventosInternosPedidos();
+    }
+
+    // NUEVO MÉTODO: Escucha en caliente las interacciones inline del fichero de órdenes
+    vincularEventosInternosPedidos() {
+        // CAPTURA EL EVENTO ELIMINAR
+        this.listadoPedidosContainer.querySelectorAll('.btn-delete-pedido-inline').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const id = e.target.closest('button').getAttribute('data-id');
+                if (confirm("⚠️ ¿Desea eliminar este pedido del panel de carga? Se removerá también de la consola mapa.")) {
+                    await deleteDoc(doc(db, "pedidos", id));
+                }
+            });
+        });
+
+        // CAPTURA EL EVENTO MODIFICAR: Sube los datos al modal flotante
+        this.listadoPedidosContainer.querySelectorAll('.btn-edit-pedido-inline').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const b = e.target.closest('button');
+                
+                this.pedidoIdEnEdicion = b.getAttribute('data-id');
+                this.pDniInput.value = b.getAttribute('data-dni');
+                document.getElementById('p-numero').value = b.getAttribute('data-numero');
+                document.getElementById('p-importe').value = b.getAttribute('data-importe');
+                document.getElementById('p-franja').value = b.getAttribute('data-franja');
+                
+                // Forzamos visibilidad limpia del campo de dirección única
+                this.pDireccionSelectGroup.style.display = "none";
+                this.pDireccionNueva.value = b.getAttribute('data-direccion');
+
+                // Cambiamos el texto del botón para denotar mutación de estado
+                this.formManualPedido.querySelector('button[type="submit"]').textContent = "Actualizar Detalles Pedido";
+                
+                this.toggleModal(this.modalPedido, true);
+                this.pDniInput.focus();
+            });
+        });
     }
 
     escucharReclamosJornada(fecha) {

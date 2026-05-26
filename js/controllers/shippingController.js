@@ -18,11 +18,9 @@ export class ShippingController {
         this.mapModule = null;
         this.filterSelect = null;
         this.sidebarContainer = null;
-        
-        // NUEVO ACCESO AL FILTRO DE CALENDARIO DEL MAPA
         this.mapDateFilter = document.getElementById('map-date-filter');
 
-        this.dialogAsignacion = document.getElementById('modal-asignacion-flota');
+        this.dialogAsignacion = document.getElementById('modal-assignment-flota');
         this.loteCantidadDisplay = document.getElementById('modal-lote-cantidad');
         this.selectTransporteLote = document.getElementById('select-transporte-lote');
         this.btnConfirmarLote = document.getElementById('btn-confirmar-despacho-lote');
@@ -30,14 +28,13 @@ export class ShippingController {
         this.btnCloseX = document.getElementById('btn-close-assignment-dialog');
 
         this.loteIdsSeleccionados = [];
-        this.unsubscribePedidos = null; // Guardado de canal activo
+        this.unsubscribePedidos = null; 
     }
 
     init() {
         this.filterSelect = document.getElementById('filter-franja');
         this.sidebarContainer = document.getElementById('pedidos-list-append');
 
-        // Seteo inicial por defecto del calendario a la jornada actual
         if (this.mapDateFilter) {
             this.mapDateFilter.value = new Date().toISOString().split('T')[0];
             this.mapDateFilter.addEventListener('change', () => this.sincronizarMapaPorFecha());
@@ -49,27 +46,30 @@ export class ShippingController {
                     this.handleMassAssignment(selectedIds);
                 });
             } catch (mapError) {
-                console.error("Fallo crítico al renderizar el lienzo de Leaflet:", mapError);
+                console.error("Fallo crítico Leaflet:", mapError);
             }
         }
 
         store.subscribe((state) => this.render(state));
         this.setupEventListeners();
         this.setupDialogListeners();
-        this.sincronizarMapaPorFecha(); // Disparo inicial con el canal unificado
+        this.sincronizarMapaPorFecha(); 
+    }
+
+    sincronizarPageSize() {
+        if (this.mapModule && this.mapModule.map) {
+            this.mapModule.map.invalidateSize();
+        }
     }
 
     sincronizarMapaPorFecha() {
         if (!this.mapDateFilter) return;
         const fechaSeleccionada = this.mapDateFilter.value;
-        
-        // Limpiamos subscripción anterior para evitar solapamientos visuales de días diferentes
         if (this.unsubscribePedidos) this.unsubscribePedidos();
         this.conectarPedidosFirestore(fechaSeleccionada);
     }
 
     conectarPedidosFirestore(fechaTarget) {
-        // Consultamos dinámicamente según la fecha seleccionada en la cabecera del mapa
         const q = query(collection(db, "pedidos"), where("fecha_creacion", "==", fechaTarget));
 
         this.unsubscribePedidos = onSnapshot(q, async (snapshot) => {
@@ -89,11 +89,23 @@ export class ShippingController {
 
             snapshot.forEach((docSnap) => {
                 const data = docSnap.data();
-                const dniClienteLimpio = data.dni_cliente ? String(data.dni_cliente).trim() : '';
+                const DniLimpio = data.dni_cliente ? String(data.dni_cliente).trim() : '';
 
-                const esClienteCriticoBase = mapClientesCriticos.get(dniClienteLimpio) || false;
-                const esClientePremiumBase = mapClientesPremium.get(dniClienteLimpio) || false;
+                const esClienteCriticoBase = mapClientesCriticos.get(DniLimpio) || false;
+                const esClientePremiumBase = mapClientesPremium.get(DniLimpio) || false;
                 const determinarCriticidad = data.esCritico || esClienteCriticoBase;
+
+                // NORMALIZACIÓN DE INSTANCIA EXTRACTORA ANTES DE ENVIAR AL STORE
+                let latExtraida = null;
+                let lngExtraida = null;
+
+                if (data.coordenada) {
+                    latExtraida = data.coordenada.lat;
+                    lngExtraida = data.coordenada.lng;
+                } else if (data.coordenadas) {
+                    latExtraida = data.coordenadas.lat;
+                    lngExtraida = data.coordenadas.lng;
+                }
 
                 pedidosData.push({
                     id: docSnap.id,
@@ -103,12 +115,13 @@ export class ShippingController {
                     esCritico: determinarCriticidad,
                     isPremium: esClientePremiumBase, 
                     motivoCritico: data.motivoCritico || (esClienteCriticoBase ? 'Cliente clasificado como CRÍTICO en Fichero Base' : ''),
-                    numeroPedido: data.numero_pedido || 'S/N',
+                    numeroPedido: data.numero_pedido || data.numeroPedido || 'S/N',
                     internoAsignado: data.interno_asignado || null,
-                    coordenadas: data.coordenada ? {
-                        lat: parseFloat(data.coordenada.lat),
-                        lng: parseFloat(data.coordenada.lng)
-                    } : null
+                    direccion: data.direccion_entrega || data.direccion || '',
+                    coordenadas: {
+                        lat: parseFloat(latExtraida),
+                        lng: parseFloat(lngExtraida)
+                    }
                 });
             });
 
@@ -118,17 +131,15 @@ export class ShippingController {
                 pedidos: pedidosData
             });
         }, (error) => {
-            console.error("Fallo crítico en el canal de datos: ", error);
+            console.error("Fallo de sincronización: ", error);
         });
     }
 
     setupEventListeners() {
         if (!this.filterSelect) return;
-
         this.filterSelect.addEventListener('change', (e) => {
             const currentStore = store.getState();
             const filtrosActuales = currentStore.filtros || { franjaHoraria: 'all' };
-
             store.setState({
                 ...currentStore,
                 filtros: { ...filtrosActuales, franjaHoraria: e.target.value }
@@ -158,9 +169,7 @@ export class ShippingController {
                 await batch.commit();
                 alert(`¡Lote asignado con éxito al Interno #${internoElegido}!`);
                 this.dialogAsignacion.close();
-            } catch (err) {
-                console.error(err);
-            }
+            } catch (err) { console.error(err); }
         });
     }
 

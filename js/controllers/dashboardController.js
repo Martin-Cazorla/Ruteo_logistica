@@ -279,22 +279,19 @@ export class DashboardController {
     }
 
     // ==========================================================================
-    // PARSER GEOGRÁFICO DE CONTINGENCIA LOCAL CORREGIDO (SIN TYPOS)
+    // GEOCALIZADOR ASÍNCRONO DEL DASHBOARD COMPLETAMENTE NORMALIZADO
     // ==========================================================================
     async _geocodificarDireccionAsync(direccionTexto) {
-        // CORRECCIÓN TÁCTICA PARA VILLA ASTOLFI (PILAR)
-        // Si el operador escribe "Villa Astolfi" o "Sanguinetti", reenfocamos el nodo base en Pilar 
-        // para evitar desvíos imprecisos hacia las costas de Martínez si el fetch falla.
         const esZonaPilar = direccionTexto.toLowerCase().includes("astolfi") || direccionTexto.toLowerCase().includes("pilar") || direccionTexto.toLowerCase().includes("sanguinetti");
         const latBase = esZonaPilar ? -34.4883 : -34.4824; 
         const lngBase = esZonaPilar ? -58.8514 : -58.5032; 
 
-        if (this.coordenadasClienteCache) {
+        // Si tenemos datos válidos en caché heredados del cliente, los usamos directamente
+        if (this.coordenadasClienteCache && !isNaN(this.coordenadasClienteCache.lat)) {
             return this.coordenadasClienteCache;
         }
 
         let queryLimpia = direccionTexto.trim();
-        // CORREGIDO: Cambiado 'queryLinter' por 'queryLimpia' para evitar caídas catastróficas del hilo de ejecución
         if (!queryLimpia.toLowerCase().includes("buenos aires")) { 
             queryLimpia += ", Buenos Aires, Argentina"; 
         }
@@ -309,12 +306,11 @@ export class DashboardController {
                 }
             }
         } catch (err) { 
-            console.warn("API de mapas bloqueada por CORS o red. Aplicando dispersión coordinada local."); 
+            console.warn("API remota offline. Aplicando dispersión coordinada."); 
         }
         
-        // DISPERSIÓN CONTROLADA EN LA CORRIENTE DE DESTINO REAL
-        const variacionLat = (Math.random() - 0.5) * 0.009;
-        const variacionLng = (Math.random() - 0.5) * 0.009;
+        const variacionLat = (Math.random() - 0.5) * 0.005;
+        const variacionLng = (Math.random() - 0.5) * 0.005;
         return { lat: latBase + variacionLat, lng: lngBase + variacionLng }; 
     }
 
@@ -338,6 +334,7 @@ export class DashboardController {
 
                     for (const p of this.pedidosCargadosExcel) {
                         const coordReal = await this._geocodificarDireccionAsync(p.direccion_entrega);
+                        // Escribimos de forma unificada bajo la propiedad 'coordenada' esperada en DB
                         pedidosEstructurados.push({ ...p, coordenada: coordReal, fecha_creacion: fechaActualBarra });
                     }
 
@@ -368,7 +365,7 @@ export class DashboardController {
                 importe: parseFloat(document.getElementById('p-importe').value),
                 franjaHoraria: document.getElementById('p-franja').value,
                 direccion_entrega: direccionFinal,
-                coordenada: coordRealSetteada, 
+                coordenada: coordRealSetteada, // Propiedad unificada en singular
                 fecha_creacion: this.globalDateFilter.value
             };
 
@@ -379,7 +376,7 @@ export class DashboardController {
                 } else {
                     dataManualOrder.esCritico = false; dataManualOrder.interno_asignado = null;
                     await addDoc(collection(db, "pedidos"), dataManualOrder);
-                    alert(`✅ Orden guardada.`);
+                    alert(`¡Pedido manual guardado con éxito!`);
                 }
 
                 this.pedidoIdEnEdicion = null;
@@ -477,9 +474,7 @@ export class DashboardController {
                 if (confirm("⚠️ ¿Desea eliminar este pedido del panel de carga?")) {
                     try {
                         await deleteDoc(doc(db, "pedidos", id));
-                    } catch (error) {
-                        console.error("Error al borrar en Firestore: ", error);
-                    }
+                    } catch (error) { console.error(error); }
                 }
             });
         });
@@ -501,6 +496,9 @@ export class DashboardController {
         });
     }
 
+    // ==========================================================================
+    // CRUCE INTEGRAL DE DNI CON LA CONFIGURACIÓN PLANA DE CLIENTES CORREGIDO
+    // ==========================================================================
     setupDniCrossSearching() {
         const btnValidarDni = document.getElementById('btn-verificar-dni');
         if (btnValidarDni && this.pDniInput) {
@@ -516,8 +514,15 @@ export class DashboardController {
                     snap.forEach(docSnap => {
                         const c = docSnap.data();
                         optionsHtml += `<option value="${Sanitizer.escapeHTML(c.direccion)}">${Sanitizer.escapeHTML(c.direccion)}</option>`;
-                        if (c.coordenada || (c.lat && c.lng)) {
-                            this.coordenadasClienteCache = c.coordenada || { lat: parseFloat(c.lat), lng: parseFloat(c.lng) };
+                        
+                        // CORRECCIÓN TÁCTICA: Extraemos 'latitud' y 'longitud' directamente de la raíz
+                        // del documento de clientes (tal como muestra tu captura image_d091be.png)
+                        if (typeof c.latitud !== 'undefined' && typeof c.longitud !== 'undefined') {
+                            this.coordenadasClienteCache = {
+                                lat: parseFloat(c.latitud),
+                                lng: parseFloat(c.longitud)
+                            };
+                            console.log("🎯 Coordenadas heredadas del Cliente Maestro:", this.coordenadasClienteCache);
                         }
                     });
                     if (this.pDireccionSelect) {

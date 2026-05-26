@@ -279,20 +279,26 @@ export class DashboardController {
     }
 
     // ==========================================================================
-    // PARSER GEOGRÁFICO DE CONTINGENCIA LOCAL AMORTIGUADA
+    // PARSER GEOGRÁFICO DE CONTINGENCIA LOCAL CORREGIDO (SIN TYPOS)
     // ==========================================================================
     async _geocodificarDireccionAsync(direccionTexto) {
-        if (!direccionTexto) return { lat: -34.4750, lng: -58.5250 }; // Centroide geográfico San Isidro / Villa Adelina estable
+        // CORRECCIÓN TÁCTICA PARA VILLA ASTOLFI (PILAR)
+        // Si el operador escribe "Villa Astolfi" o "Sanguinetti", reenfocamos el nodo base en Pilar 
+        // para evitar desvíos imprecisos hacia las costas de Martínez si el fetch falla.
+        const esZonaPilar = direccionTexto.toLowerCase().includes("astolfi") || direccionTexto.toLowerCase().includes("pilar") || direccionTexto.toLowerCase().includes("sanguinetti");
+        const latBase = esZonaPilar ? -34.4883 : -34.4824; 
+        const lngBase = esZonaPilar ? -58.8514 : -58.5032; 
 
-        // Si la consulta viene con caché del DNI validado, la usamos de forma directa e inmediata
         if (this.coordenadasClienteCache) {
             return this.coordenadasClienteCache;
         }
 
         let queryLimpia = direccionTexto.trim();
-        if (!queryLinter.toLowerCase().includes("buenos aires")) { queryLimpia += ", Buenos Aires, Argentina"; }
+        // CORREGIDO: Cambiado 'queryLinter' por 'queryLimpia' para evitar caídas catastróficas del hilo de ejecución
+        if (!queryLimpia.toLowerCase().includes("buenos aires")) { 
+            queryLimpia += ", Buenos Aires, Argentina"; 
+        }
 
-        // Agregamos un try-catch ultra silencioso para mitigar bloqueos de CORS en servidores remotos
         try {
             const urlApi = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryLimpia)}&limit=1`;
             const respuesta = await fetch(urlApi, { headers: { 'User-Agent': 'Martinez-Routing-Application-v2.5' } });
@@ -303,15 +309,13 @@ export class DashboardController {
                 }
             }
         } catch (err) { 
-            console.warn("Pasarela externa Nominatim offline o bloqueada por CORS. Derivando a dispersión elástica local."); 
+            console.warn("API de mapas bloqueada por CORS o red. Aplicando dispersión coordinada local."); 
         }
         
-        // DISPERSIÓN ELÁSTICA: Para evitar que se amontonen en un solo punto si el fetch falla,
-        // generamos micro-variaciones decimales aleatorias alrededor del centro logístico de Martínez.
-        // Esto separará los pines físicamente en el mapa aunque caigan en la misma zona.
-        const variacionLat = (Math.random() - 0.5) * 0.015;
-        const variacionLng = (Math.random() - 0.5) * 0.015;
-        return { lat: -34.4824 + variacionLat, lng: -58.5032 + variacionLng }; 
+        // DISPERSIÓN CONTROLADA EN LA CORRIENTE DE DESTINO REAL
+        const variacionLat = (Math.random() - 0.5) * 0.009;
+        const variacionLng = (Math.random() - 0.5) * 0.009;
+        return { lat: latBase + variacionLat, lng: lngBase + variacionLng }; 
     }
 
     setupExcelEventListeners() {
@@ -497,22 +501,6 @@ export class DashboardController {
         });
     }
 
-    escucharReclamosJornada(fecha) {
-        if (!this.listadoReclamosContainer) return;
-        const q = query(collection(db, "pedidos"), where("fecha_creacion", "==", fecha), where("esCritico", "==", true));
-        this.unsubscribeReclamos = onSnapshot(q, (snapshot) => {
-            this.listadoReclamosContainer.innerHTML = snapshot.docs.map(docSnap => {
-                const p = docSnap.data();
-                return `
-                    <div class="card-panel card-panel--danger-alert">
-                        <strong>Orden Crítica: #${Sanitizer.escapeHTML(p.numero_pedido)}</strong><br>
-                        <span class="alert-reason-text">⚠️ Motivo: ${Sanitizer.escapeHTML(p.motivoCritico)}</span>
-                    </div>
-                `;
-            }).join('') || '<div class="placeholder-vacio-jornada">No hay reclamos activos hoy.</div>';
-        });
-    }
-
     setupDniCrossSearching() {
         const btnValidarDni = document.getElementById('btn-verificar-dni');
         if (btnValidarDni && this.pDniInput) {
@@ -528,10 +516,6 @@ export class DashboardController {
                     snap.forEach(docSnap => {
                         const c = docSnap.data();
                         optionsHtml += `<option value="${Sanitizer.escapeHTML(c.direccion)}">${Sanitizer.escapeHTML(c.direccion)}</option>`;
-                        
-                        // HERENCIA GEOESPACIAL CRÍTICA:
-                        // Si el documento del cliente en el fichero maestro tiene coordenadas precargadas,
-                        // las guardamos en memoria temporal para usarlas al enviar el formulario.
                         if (c.coordenada || (c.lat && c.lng)) {
                             this.coordenadasClienteCache = c.coordenada || { lat: parseFloat(c.lat), lng: parseFloat(c.lng) };
                         }

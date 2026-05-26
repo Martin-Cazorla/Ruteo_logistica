@@ -7,6 +7,7 @@ export class MapModule {
      * @param {Function} onSelectionCallback Ejecutado al seleccionar múltiples pedidos en mapa
      */
     constructor(mapElementId, onSelectionCallback) {
+        // Inicialización del contenedor centrado en Buenos Aires
         this.map = L.map(mapElementId).setView([-34.6037, -58.3816], 12);
         this.markerCluster = L.markerClusterGroup();
         this.onSelection = onSelectionCallback;
@@ -24,16 +25,15 @@ export class MapModule {
     }
 
     _initTileLayer() {
-        // CORREGIDO: Migramos al servidor satelital/topográfico global de Esri.
-        // Soporta de forma nativa multiplexación HTTP/2 y no genera rechazo de streams (REFUSED_STREAM).
+        // Capa de mapas topográficos provista por Esri con soporte HTTP/2 nativo
         const tiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
             maxZoom: 19,
-            attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community'
+            attribution: 'Tiles &copy; Esri &mdash; Esri, GIS User Community'
         }).addTo(this.map);
         
         this.map.addLayer(this.markerCluster);
 
-        // Forzamos el redibujo geométrico inmediato del contenedor
+        // Ajuste reactivo del tamaño del viewport para evitar renderizados parciales grisáceos
         tiles.once('tileload', () => {
             setTimeout(() => {
                 if (this.map) {
@@ -43,14 +43,13 @@ export class MapModule {
             }, 150);
         });
 
-        // Respaldo de seguridad por delay de renderizado
         setTimeout(() => {
             if (this.map) this.map.invalidateSize();
         }, 500);
     }
 
     /**
-     * Renderiza o actualiza marcadores de forma masiva
+     * Renderiza o actualiza marcadores mapeando de forma flexible las mutaciones de Firestore
      * @param {Array} pedidos 
      */
     updateMarkers(pedidos) {
@@ -58,14 +57,40 @@ export class MapModule {
         this.currentMarkers.clear();
 
         pedidos.forEach(pedido => {
-            if (!pedido || !pedido.coordenadas || typeof pedido.coordenadas.lat === 'undefined' || typeof pedido.coordenadas.lng === 'undefined' || !pedido.coordenadas.lat) {
+            if (!pedido) return;
+
+            // ==========================================================================
+            // ALGORITMO DEFENSIVO DE EXTRACCIÓN GEOESPACIAL MULTI-FORMATO
+            // ==========================================================================
+            let lat = null;
+            let lng = null;
+
+            if (pedido.coordenadas) {
+                lat = pedido.coordenadas.lat;
+                lng = pedido.coordenadas.lng;
+            } else if (pedido.coordenada) { // Estructura de colección /pedidos en Firestore
+                lat = pedido.coordenada.lat;
+                lng = pedido.coordenada.lng;
+            } else if (typeof pedido.latitud !== 'undefined' && typeof pedido.longitud !== 'undefined') { // Estructura plana de clientes
+                lat = pedido.latitud;
+                lng = pedido.longitud;
+            }
+
+            // Sanitización tipográfica a números de punto flotante de precisión
+            const parsedLat = parseFloat(lat);
+            const parsedLng = parseFloat(lng);
+
+            // Control de exclusión: Si las coordenadas no son numéricas o apuntan al cero absoluto, se descarta el pin
+            if (isNaN(parsedLat) || isNaN(parsedLng) || parsedLat === 0 || parsedLng === 0) {
+                console.warn(`⚠️ Pedido #${pedido.numeroPedido || 'S/N'} omitido en mapa por inconsistencia en campos geoespaciales.`);
                 return;
             }
 
             const colorClass = this._getColorByFranja(pedido.franjaHoraria);
             let markerOptions = {};
 
-            if (pedido.esCritico) {
+            // Renderizado de iconos especiales dinámicos para contingencias críticas
+            if (pedido.esCritico || pedido.critico) {
                 const fireIcon = L.divIcon({
                     className: `marker-critical-fire ${colorClass}`,
                     html: `<div style="width:12px; height:12px;"></div>`,
@@ -74,13 +99,14 @@ export class MapModule {
                 markerOptions = { icon: fireIcon };
             }
 
-            const marker = L.marker([pedido.coordenadas.lat, pedido.coordenadas.lng], markerOptions);
+            const marker = L.marker([parsedLat, parsedLng], markerOptions);
             const safeMotivo = Sanitizer.escapeHTML(pedido.motivoCritico || 'Sin reclamos pendientes');
             
             marker.bindPopup(`
                 <div class="map-popup">
-                    <h3>Pedido: ${Sanitizer.escapeHTML(pedido.numeroPedido)}</h3>
-                    <p><b>Franja:</b> ${Sanitizer.escapeHTML(pedido.franjaHoraria)}</p>
+                    <h3>Pedido: #${Sanitizer.escapeHTML(pedido.numeroPedido || 'S/N')}</h3>
+                    <p><b>Franja:</b> ${Sanitizer.escapeHTML(pedido.franjaHoraria || 'No asignada')}</p>
+                    <p><b>Dirección:</b> ${Sanitizer.escapeHTML(pedido.direccion || 'No especificada')}</p>
                     <p><b>Alerta:</b> ${safeMotivo}</p>
                 </div>
             `);

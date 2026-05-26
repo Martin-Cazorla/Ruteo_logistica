@@ -5,10 +5,9 @@ import {
     collection, 
     onSnapshot, 
     query, 
-    addDoc, 
     doc, 
     deleteDoc, 
-    updateDoc 
+    setDoc
 } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
 export class ClientesController {
@@ -20,7 +19,6 @@ export class ClientesController {
         this.telefonoInput = document.getElementById('c-telefono');
         this.direccionInput = document.getElementById('c-direccion');
         
-        // INPUTS BOOLEANOS DE HISTORIAL TÁCTICO
         this.checkPremium = document.getElementById('c-is-premium');
         this.checkCritico = document.getElementById('c-is-critico');
 
@@ -76,16 +74,13 @@ export class ClientesController {
             const telSeguro = Sanitizer.escapeHTML(c.telefono);
             const dirSeguro = Sanitizer.escapeHTML(c.direccion);
 
-            // Resguardo estricto ante valores nulos o indefinidos de la base de datos
             const esPremium = !!c.isPremium;
             const esCritico = !!c.isCritico;
 
-            // DETERMINACIÓN EN CALIENTE DE CLASES CSS DE SEGMENTACIÓN VISUAL
             let claseVarianteTarjeta = "";
             if (esCritico) claseVarianteTarjeta += " cliente-item-row--critico";
             if (esPremium) claseVarianteTarjeta += " cliente-item-row--premium";
 
-            // Inyección condicional de badges de texto compactos
             let badgesHTML = "";
             if (esPremium) badgesHTML += `<span class="badge-tag-cliente badge-tag-cliente--premium">⭐ PREMIUM</span>`;
             if (esCritico) badgesHTML += `<span class="badge-tag-cliente badge-tag-cliente--critico">⚠️ CRÍTICO</span>`;
@@ -139,7 +134,6 @@ export class ClientesController {
                 this.telefonoInput.value = b.getAttribute('data-telefono');
                 this.direccionInput.value = b.getAttribute('data-direccion');
 
-                // Mapeo inverso de los checkboxes booleanos al entrar en edición
                 this.checkPremium.checked = b.getAttribute('data-premium') === 'true';
                 this.checkCritico.checked = b.getAttribute('data-critico') === 'true';
 
@@ -151,32 +145,80 @@ export class ClientesController {
         });
     }
 
+    // ==========================================================================
+    // GEOCALIZADOR ASÍNCRONO INTEGRADO PARA EL FICHERO DE CLIENTES
+    // ==========================================================================
+    async _obtenerCoordenadasAsync(direccionTexto) {
+        if (!direccionTexto) return { latitud: -34.4824, longitud: -58.5032 };
+        
+        let queryLimpia = direccionTexto.trim();
+        if (!queryLimpia.toLowerCase().includes("buenos aires")) {
+            queryLimpia += ", Buenos Aires, Argentina";
+        }
+
+        try {
+            const urlApi = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryLimpia)}&limit=1`;
+            const respuesta = await fetch(urlApi, { headers: { 'User-Agent': 'Martinez-Routing-Application-v2.5' } });
+            if (respuesta.ok) {
+                const dataJson = await respuesta.json();
+                if (dataJson && dataJson.length > 0) {
+                    return {
+                        latitud: parseFloat(dataJson[0].lat),
+                        longitud: parseFloat(dataJson[0].lon)
+                    };
+                }
+            }
+        } catch (err) {
+            console.warn("Fallo de red o CORS en Nominatim para Clientes. Aplicando aproximación.");
+        }
+
+        // Si falla, dispersa sutilmente para que Villa Astolfi o Martínez no colisionen en el mismo píxel
+        const desvio = (Math.random() - 0.5) * 0.01;
+        const esPilar = queryLimpia.toLowerCase().includes("astolfi") || queryLimpia.toLowerCase().includes("pilar");
+        return {
+            latitud: (esPilar ? -34.4883 : -34.4824) + desvio,
+            longitud: (esPilar ? -58.8514 : -58.5032) + desvio
+        };
+    }
+
     setupFormSubmitListener() {
         this.formCliente.addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            const clienteId = this.hiddenIdInput.value;
+            // Deshabilitamos el botón temporalmente para evitar doble click y escrituras duplicadas
+            this.btnSubmit.disabled = true;
+            this.btnSubmit.textContent = "Procesando coordenadas logísticas...";
+
+            const dniDocumento = this.dniInput.value.trim();
+            const direccionTexto = this.direccionInput.value.trim();
+
+            // Disparador asíncrono para inyectar latitud y longitud reales al guardar
+            const geoResult = await this._obtenerCoordenadasAsync(direccionTexto);
+
             const payloadData = {
-                dni: this.dniInput.value.trim(),
-                nombre: this.nombreInput.value.trim(),
+                dni: dniDocumento,
+                nombre: this.nombreInput.value.trim().toUpperCase(),
                 telefono: this.telefonoInput.value.trim(),
-                direccion: this.direccionInput.value.trim(),
+                direccion: direccionTexto,
+                latitud: geoResult.latitud,   // 👈 Guardado plano exacto como lo muestra tu image_cf34e0.png
+                longitud: geoResult.longitud, // 👈 Guardado plano exacto como lo muestra tu image_cf34e0.png
                 isPremium: this.checkPremium.checked,
                 isCritico: this.checkCritico.checked
             };
 
             try {
-                if (clienteId) {
-                    await updateDoc(doc(db, "clientes", clienteId), payloadData);
-                    alert("¡Registro de cliente actualizado con segmentación operativa!");
-                } else {
-                    await addDoc(collection(db, "clientes"), payloadData);
-                    alert("¡Nuevo cliente registrado con éxito con perfil logístico!");
-                }
+                // REQUISITO INDUSTRIAL: Usamos setDoc con el DNI como ID de documento de forma estricta.
+                // Esto unifica el comportamiento y evita registros huérfanos duplicados con IDs aleatorios de Firebase.
+                const clienteRef = doc(db, "clientes", dniDocumento);
+                await setDoc(clienteRef, payloadData, { merge: true });
 
+                alert("¡Fichero Maestro de Clientes actualizado con éxito geográfico!");
                 this.limpiarFormulario();
             } catch (err) {
                 console.error("Fallo crítico en operaciones del Fichero Maestro: ", err);
+            } finally {
+                this.btnSubmit.disabled = false;
+                this.btnSubmit.textContent = this.hiddenIdInput.value ? "Actualizar Datos Cliente" : "Guardar Cliente en Base";
             }
         });
     }
@@ -192,14 +234,14 @@ export class ClientesController {
                 return;
             }
 
-            const listaFiltrada = this.cacheClientesList.filter(c => {
+            const listafiltrada = this.cacheClientesList.filter(c => {
                 const matchDni = (c.dni || '').toLowerCase().includes(termino);
                 const matchNombre = (c.nombre || '').toLowerCase().includes(termino);
                 const matchDir = (c.direccion || '').toLowerCase().includes(termino);
                 return matchDni || matchNombre || matchDir;
             });
 
-            this.renderClientes(listaFiltrada);
+            this.renderClientes(listafiltrada);
         });
     }
 

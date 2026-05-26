@@ -39,7 +39,6 @@
             </div>
 
             <section id="panel-unidades" class="tab-panel active" role="tabpanel" aria-labelledby="tab-unidades">
-                
                 <div class="card-panel search-express-bar">
                     <div class="express-inputs-group">
                         <input type="text" id="input-express-unidad" class="select-field" placeholder="INGRESÁ ID UNIDAD O CHOFER + ENTER" aria-label="Identificador express de unidad">
@@ -59,8 +58,7 @@
                     <span class="badge badge--danger">En Horas Extra: <strong id="count-extra">0</strong></span>
                 </div>
 
-                <div id="unidades-secciones-container" class="form-vertical-stack">
-                    </div>
+                <div id="unidades-secciones-container" class="form-vertical-stack"></div>
             </section>
 
             <section id="panel-pedidos" class="tab-panel" role="tabpanel" aria-labelledby="tab-pedidos" hidden>
@@ -144,7 +142,7 @@
                     <label for="p-direccion-nueva">Dirección de Entrega (Nueva / Única):</label>
                     <input type="text" id="p-direccion-nueva" class="select-field" placeholder="Calle, Altura, Localidad">
                 </div>
-                <div class="grid-form-row-two-columns">
+                <div class="grid-form-row-two-columns" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem;">
                     <div class="form-group">
                         <label for="p-numero">Nº Pedido (Jumbo):</label>
                         <input type="text" id="p-numero" class="select-field" required>
@@ -163,7 +161,7 @@
                         <option value="19:00-21:30">Nocturno (19:00 - 21:30)</option>
                     </select>
                 </div>
-                <button type="submit" class="btn-primary w-100">Inyectar Pedido Manual</button>
+                <button type="submit" class="btn-primary w-100" style="margin-top: 0.5rem;">Inyectar Pedido Manual</button>
             </form>
         </div>
     </div>

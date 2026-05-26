@@ -30,17 +30,19 @@
                 <p class="instruction-text">Registre las camionetas estables que integran la flota de distribución de Jumbo Martinez.</p>
                 
                 <form id="form-alta-transporte" class="form-vertical">
+                    <input type="hidden" id="t-id-edicion">
+
                     <div class="form-group">
                         <label for="t-numero-unidad">Número de Unidad (Interno Fijo):</label>
-                        <input type="text" id="t-numero-unidad" class="select-field" placeholder="Ej: 99" required>
+                        <input type="text" id="t-numero-unidad" class="select-field" placeholder="Ej: 99" required autocomplete="off">
                     </div>
                     <div class="form-group">
                         <label for="t-modelo-unidad">Modelo del Vehículo:</label>
-                        <input type="text" id="t-modelo-unidad" class="select-field" placeholder="Ej: Renault Master 2.5 DCI" required>
+                        <input type="text" id="t-modelo-unidad" class="select-field" placeholder="Ej: Renault Master 2.5 DCI" required autocomplete="off">
                     </div>
                     <div class="form-group">
                         <label for="t-nombre-chofer">Nombre y Apellido del Chofer:</label>
-                        <input type="text" id="t-nombre-chofer" class="select-field" placeholder="Ej: Carlos Vitale" required>
+                        <input type="text" id="t-nombre-chofer" class="select-field" placeholder="Ej: Carlos Vitale" required autocomplete="off">
                     </div>
                     <div class="form-group">
                         <label for="t-tamanio-unidad">Capacidad / Tamaño de Carga:</label>
@@ -54,7 +56,11 @@
                         <label for="t-comentarios-unidad">Historial de Observaciones / Reclamos de la Unidad:</label>
                         <textarea id="t-comentarios-unidad" class="select-field" rows="4" placeholder="Detalles de mantenimiento, estado mecánico o reclamos permanentes de la unidad..."></textarea>
                     </div>
-                    <button type="submit" class="btn-primary w-100">Guardar en Fichero Global</button>
+                    
+                    <div class="action-buttons-group" style="display: flex; gap: 0.75rem; width: 100%;">
+                        <button type="submit" id="btn-submit-transporte" class="btn-primary w-100">Guardar en Fichero Global</button>
+                        <button type="button" id="btn-cancelar-edicion" class="btn-secondary" style="display: none; background-color: #475569;">Cancelar Edición</button>
+                    </div>
                 </form>
             </section>
 
@@ -63,7 +69,7 @@
                 <div class="search-box">
                     <input type="search" id="search-flota" class="select-field" placeholder="Buscar por número de interno, modelo o chofer...">
                 </div>
-                <div id="listado-flota-maestra" class="list-scroll-box">
+                <div id="listado-flota-maestra" class="list-scroll-box" role="region" aria-live="polite">
                     </div>
             </section>
 
@@ -85,4 +91,3 @@
 
     <script type="module" src="../js/controllers/transporteController.js"></script>
 </body>
-</html>

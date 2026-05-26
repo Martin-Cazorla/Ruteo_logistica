@@ -19,22 +19,63 @@
   }
 }
 
-// NUEVA COMPACTACIÓN DE TARJETAS LOGÍSTICAS (image_4328ec.png)
+// ARQUITECTURA INTEGRADA DE TARJETA COMPACTA DE ALTA DENSIDAD
 .card-unidad-tactica {
-  padding: 0.65rem 0.75rem; // Margen interno súper ajustado para ganar aire
-  min-height: auto; // Que no ocupe espacio muerto vertical
+  padding: 0.65rem 0.75rem; 
+  min-height: auto; 
   gap: 0.5rem;
   border-radius: 8px;
+  position: relative; // Requerido para contener el sello absoluto
+  overflow: hidden;
+  transition: $transition-smooth;
 
-  &.card-panel--critica {
-    border: 2px solid #ef4444;
-    box-shadow: 0 0 10px rgba(239, 68, 68, 0.25);
+  // ALERTA DE JORNADA CUMPLIDA (Verde translúcido cruzado de fondo)
+  // scss/components/_cards.scss - Fragmento de .card-unidad-tactica
+  
+  // ALERTA DE JORNADA CUMPLIDA (Cruzado al frente de forma estética)
+  .sello-jornada-cumplida {
+    position: absolute;
+    top: 55%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-15deg);
+    font-size: 1.35rem;
+    font-weight: 900;
+    color: rgba(#22c55e, 0.45); // Mayor presencia de color para el contraste oscuro
+    letter-spacing: 1.5px;
+    white-space: nowrap;
+    pointer-events: none; // CRÍTICO: Permite hacer clic en los botones de abajo sin obstrucción
+    user-select: none;
+    z-index: 20; // CORREGIDO: Se eleva sobre los botones (z-index: 10) para no quedar detrás
+    text-shadow: 0 0 10px rgba(#000, 0.8); // Sombra de alta definición para legibilidad
+  }
+
+  // ALERTA DE CAMPO SÍ (Cambio de fondo inmediato para aviso visual)
+  &.card-unidad-tactica--en-campo {
+    background-color: #2a1b1f; // Tono rojizo oscuro institucional
+    border: 1px solid rgba(#ef4444, 0.4);
+  }
+
+  // UNIDAD FINALIZADA DESDE MODAL (Opacidad y bloqueo visual)
+  &.card-unidad-tactica--finalizada {
+    opacity: 0.45;
+    filter: grayscale(60%);
+    border: 1px dashed #475569;
+    .btn-toggle-vuelta {
+      cursor: not-allowed !important;
+    }
+  }
+
+  // EFECTO ALERTA FUEGO 🔥 (Animación pulsante perimetral cruzada con shipping.html)
+  &.card-unidad-tactica--fuego-activo {
+    border: 1px solid #f97316;
+    animation: pulso-borde-fuego 1.2s infinite alternate;
   }
 
   .card-unidad-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    z-index: 10;
 
     .card-header-left {
       display: inline-flex;
@@ -42,17 +83,17 @@
       gap: 0.4rem;
 
       .card-interno-display {
-        font-size: 1.15rem; // Interno compacto y legible
+        font-size: 1.15rem; 
         color: #f8fafc;
         font-weight: 800;
       }
 
-      // Píldoras compactas para optimizar ancho
       .badge {
         padding: 0.15rem 0.4rem;
         font-size: 0.68rem;
         font-weight: 700;
         border-radius: 4px;
+        cursor: pointer;
       }
     }
 
@@ -64,6 +105,7 @@
       cursor: pointer;
       line-height: 1;
       padding: 0;
+      z-index: 12;
 
       &:hover {
         color: #ef4444;
@@ -72,7 +114,7 @@
   }
 
   .card-unidad-info {
-    font-size: 0.78rem; // Reducción de tipografía general
+    font-size: 0.78rem; 
     color: $color-text-muted;
     line-height: 1.2;
 
@@ -82,14 +124,14 @@
     }
   }
 
-  // Cuadrícula micro de botones de vueltas para no estirar la tarjeta horizontalmente
   .grid-vueltas-buttons {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 0.25rem;
+    z-index: 10;
 
     button.btn-toggle-vuelta {
-      font-size: 0.72rem; // Tamaño exacto de image_4328ec.png
+      font-size: 0.72rem; 
       padding: 0.25rem 0.2rem;
       font-weight: 600;
       border-radius: 3px;
@@ -131,6 +173,8 @@
     border-top: 1px solid rgba($color-border, 0.5);
     padding-top: 0.3rem;
     text-align: center;
+    cursor: pointer;
+    z-index: 10;
 
     &:hover {
       color: #fde047;
@@ -138,10 +182,17 @@
   }
 }
 
-.separator {
-  border: 0;
-  border-top: 1px solid $color-border;
-  margin: 1rem 0;
+// ANIMACIÓN DE PROPAGACIÓN DEL FUEGO 🔥
+@keyframes pulso-borde-fuego {
+  0% {
+    box-shadow: 0 0 4px rgba(#f97316, 0.2);
+    border-color: rgba(#f97316, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 12px rgba(#ef4444, 0.5);
+    border-color: rgba(#ef4444, 1);
+  }
 }
 
+.separator { border: 0; border-top: 1px solid $color-border; margin: 1rem 0; }
 .w-100 { width: 100%; }

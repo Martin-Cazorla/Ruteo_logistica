@@ -53,31 +53,8 @@
   gap: 0.5rem;
   border-bottom: 2px solid $color-border;
   margin-bottom: 1.5rem;
-  overflow-x: auto;
-
-  .tab-btn {
-    background: none;
-    border: none;
-    color: $color-text-muted;
-    padding: 0.75rem 1.25rem;
-    font-size: 0.95rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: $transition-smooth;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -2px;
-    white-space: nowrap;
-
-    &:hover {
-      color: $color-text-main;
-    }
-
-    &.active {
-      color: $color-time-16-19;
-      font-weight: 600;
-      border-bottom: 2px solid $color-time-16-19;
-    }
-  }
+  overflow: hidden; // CORREGIDO: Bloquea cualquier intento de scroll vertical u horizontal
+  flex-wrap: nowrap; // Mantiene los botones alineados de forma estricta en una sola línea
 }
 
 .tab-panel {

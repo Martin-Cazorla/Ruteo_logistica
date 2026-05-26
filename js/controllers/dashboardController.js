@@ -17,34 +17,51 @@ import {
 
 export class DashboardController {
     constructor() {
+        // Contenedores principales e inputs de la cabecera
         this.globalDateFilter = document.getElementById('global-date-filter');
         this.unidadesSeccionesContainer = document.getElementById('unidades-secciones-container');
         
         this.inputExpressUnidad = document.getElementById('input-express-unidad');
         this.selectExpressIngreso = document.getElementById('select-express-ingreso');
 
+        // Contadores superiores de control (KPI de jornada)
         this.countTotal = document.getElementById('count-total');
         this.countDisp = document.getElementById('count-disp');
         this.countExtra = document.getElementById('count-extra');
 
+        // Modulos de carga masiva por planillas Jumbo
         this.excelInput = document.getElementById('excel-file');
         this.fileNameDisplay = document.getElementById('file-name-display');
         this.btnProcesar = document.getElementById('btn-procesar-carga');
         this.listadoPedidosContainer = document.getElementById('listado-pedidos');
-        this.searchPedidoInput = document.getElementById('search-pedido');
 
+        // Gestión reactiva de reclamos críticos
         this.formReclamo = document.getElementById('form-reclamo');
         this.recDniInput = document.getElementById('rec-dni');
         this.recDireccionSelect = document.getElementById('rec-direccion');
         this.recClienteStatus = document.getElementById('rec-cliente-status');
         this.listadoReclamosContainer = document.getElementById('listado-reclamos');
 
+        // Modal base tradicional de creación manual
         this.modalPedido = document.getElementById('modal-pedido');
         this.formManualPedido = document.getElementById('form-manual-pedido');
         this.pDniInput = document.getElementById('p-dni');
         this.pDireccionSelect = document.getElementById('p-direccion-select');
         this.pDireccionSelectGroup = document.getElementById('domicilios-select-group');
 
+        // ==========================================================================
+        // VINCULACIÓN MAESTRA DEL COMPONENTE DIALOG (MÓDULO DE AUDITORÍA AVANZADA)
+        // ==========================================================================
+        this.dialogGestion = document.getElementById('modal-gestion-unidad');
+        this.dialogInternoDisplay = document.getElementById('modal-interno-display');
+        this.dialogNotesArea = document.getElementById('modal-notes-area');
+        this.dialogCheckForceExtra = document.getElementById('modal-checkbox-force-extra');
+        this.btnSaveDialog = document.getElementById('btn-save-gestion-dialog');
+        this.btnFinalizeUnit = document.getElementById('btn-finalizar-jornada-unidad');
+        this.btnCloseDialog = document.getElementById('btn-close-gestion-dialog');
+
+        // Estado interno volátil del controlador
+        this.activeUnitIdForDialog = null; 
         this.pedidosCargadosExcel = [];
         this.unsubscribeUnidades = null;
         this.unsubscribePedidos = null;
@@ -54,16 +71,19 @@ export class DashboardController {
     }
 
     init() {
+        // Seteo inicial de fecha operativa de control
         if (this.globalDateFilter) {
             this.globalDateFilter.value = new Date().toISOString().split('T')[0];
             this.globalDateFilter.addEventListener('change', () => this.sincronizarTodaLaJornada());
         }
 
+        // Inicialización modular de manejadores de eventos
         this.setupTabsBehavior();
         this.setupModalToggles();
         this.setupExcelEventListeners();
         this.setupExpressDispatchListener();
         this.setupDniCrossSearching();
+        this.setupDialogActions(); // Activación de escuchadores nativos del Dialog
 
         this.sincronizarTodaLaJornada();
     }
@@ -71,6 +91,7 @@ export class DashboardController {
     sincronizarTodaLaJornada() {
         const fechaSeleccionada = this.globalDateFilter.value;
 
+        // Limpieza de suscripciones activas para evitar fugas de memoria y sobreconsumo en Firebase
         if (this.unsubscribeUnidades) this.unsubscribeUnidades();
         if (this.unsubscribePedidos) this.unsubscribePedidos();
         if (this.unsubscribeReclamos) this.unsubscribeReclamos();
@@ -137,16 +158,22 @@ export class DashboardController {
 
         const q = query(collection(db, "unidades"), where("fecha", "==", fecha));
         
-        this.unsubscribeUnidades = onSnapshot(q, (snapshot) => {
+        this.unsubscribeUnidades = onSnapshot(q, async (snapshot) => {
             let total = 0, enVuelta = 0, enExtra = 0;
             
             const mapaGrupos = {
-                "09:00 hs": [],
-                "10:00 hs": [],
-                "11:00 hs": [],
-                "Electro": [],
-                "Ausente": []
+                "09:00 hs": [], "10:00 hs": [], "11:00 hs": [], "Electro": [], "Ausente": []
             };
+
+            // CROSS SEARCHING LOGÍSTICO: Consulta en caliente de alertas fuego cruzadas con shipping.html
+            const pedidosSnap = await getDocs(query(collection(db, "pedidos"), where("fecha_creacion", "==", fecha), where("esCritico", "==", true)));
+            const internosConFuego = new Set();
+            pedidosSnap.forEach(pDoc => {
+                const pData = pDoc.data();
+                if (pData.interno_asignado) {
+                    internosConFuego.add(String(pData.interno_asignado).toLowerCase());
+                }
+            });
 
             snapshot.forEach((docSnap) => {
                 const u = docSnap.data();
@@ -160,7 +187,8 @@ export class DashboardController {
 
                 const qVueltasTotales = [v10, v13, v16, v19].filter(Boolean).length;
 
-                if (qVueltasTotales >= 4) enExtra++;
+                // Auditoría superior de horas extra por vueltas físicas o switch forzado de compensación
+                if (u.extraForzado || qVueltasTotales >= 4) enExtra++;
                 else enVuelta++;
 
                 const objUnidad = { id, ...u, qVueltasTotales, v10, v13, v16, v19 };
@@ -180,26 +208,33 @@ export class DashboardController {
 
                 htmlMaestro += `
                     <div class="bloque-horario-jornada">
-                        <h3 class="horario-header-title">
-                            INGRESO ${franja}
-                        </h3>
+                        <h3 class="horario-header-title">INGRESO ${franja}</h3>
                         <div class="horario-cards-grid">
                             ${listaUnidades.map(u => {
                                 const intSeguro = Sanitizer.escapeHTML(u.interno);
                                 const choSeguro = Sanitizer.escapeHTML(u.chofer);
                                 const modSeguro = Sanitizer.escapeHTML(u.modelo);
-                                const tamSeguro = Sanitizer.escapeHTML(u.tamanio);
                                 const notaSegura = Sanitizer.escapeHTML(u.notes || '');
 
-                                const tieneAlertasMecanicas = u.tieneAlertas || false;
-                                const claseCritica = tieneAlertasMecanicas ? 'card-panel--critica' : '';
+                                // Inyección reactiva de modificadores de clase css de alta densidad
                                 const claseCampoColor = u.entregaCampo ? 'badge--danger' : 'badge--info';
+                                const claseUnidadEnCampo = u.entregaCampo ? 'card-unidad-tactica--en-campo' : '';
+                                const claseFinalizada = u.finalizada ? 'card-unidad-tactica--finalizada' : '';
+                                
+                                // Activación del Efecto Alerta Fuego cruzado 🔥
+                                const tieneFuegoCruzado = internosConFuego.has(String(u.interno).toLowerCase());
+                                const claseFuegoEfecto = tieneFuegoCruzado ? 'card-unidad-tactica--fuego-activo' : '';
 
                                 return `
-                                    <article class="card-panel card-unidad-tactica ${claseCritica}" data-id="${u.id}">
+                                    <article class="card-panel card-unidad-tactica ${claseUnidadEnCampo} ${claseFinalizada} ${claseFuegoEfecto}" data-id="${u.id}" data-interno="${intSeguro}" data-notes="${notaSegura}" data-force-extra="${!!u.extraForzado}">
+                                        
+                                        ${u.qVueltasTotales === 3 ? '<div class="sello-jornada-cumplida">JORNADA CUMPLIDA</div>' : ''}
+                                        
                                         <div class="card-unidad-header">
                                             <div class="card-header-left">
-                                                <strong class="card-interno-display">#${intSeguro}</strong>
+                                                <strong class="card-interno-display">
+                                                    ${tieneFuegoCruzado ? '🔥 ' : ''}#${intSeguro}
+                                                </strong>
                                                 <span class="badge ${claseCampoColor} btn-toggle-campo-express" data-id="${u.id}">
                                                     ${u.entregaCampo ? 'CAMPO SÍ' : 'CAMPO NO'}
                                                 </span>
@@ -208,23 +243,23 @@ export class DashboardController {
                                         </div>
 
                                         <div class="card-unidad-info">
-                                            <span class="driver-title">${choSeguro}</span> <small class="cap-title">(${tamSeguro})</small><br>
+                                            <span class="driver-title">${choSeguro}</span><br>
                                             <span class="model-title">${modSeguro}</span>
                                         </div>
 
                                         <div class="grid-vueltas-buttons">
-                                            <button class="btn-primary btn-toggle-vuelta ${u.v10 ? 'btn-vuelta-activa' : 'btn-vuelta-apagada'}" data-id="${u.id}" data-v="v10">10:00</button>
-                                            <button class="btn-primary btn-toggle-vuelta ${u.v13 ? 'btn-vuelta-activa' : 'btn-vuelta-apagada'}" data-id="${u.id}" data-v="v13">13:00</button>
-                                            <button class="btn-primary btn-toggle-vuelta ${u.v16 ? 'btn-vuelta-activa' : 'btn-vuelta-apagada'}" data-id="${u.id}" data-v="v16">16:00</button>
-                                            <button class="btn-primary btn-toggle-vuelta ${u.v19 ? 'btn-vuelta-activa' : 'btn-vuelta-apagada'}" data-id="${u.id}" data-v="v19">19:00</button>
+                                            <button class="btn-primary btn-toggle-vuelta ${u.v10 ? 'btn-vuelta-activa' : 'btn-vuelta-apagada'}" data-id="${u.id}" data-v="v10" ${u.finalizada ? 'disabled' : ''}>10:00</button>
+                                            <button class="btn-primary btn-toggle-vuelta ${u.v13 ? 'btn-vuelta-activa' : 'btn-vuelta-apagada'}" data-id="${u.id}" data-v="v13" ${u.finalizada ? 'disabled' : ''}>13:00</button>
+                                            <button class="btn-primary btn-toggle-vuelta ${u.v16 ? 'btn-vuelta-activa' : 'btn-vuelta-apagada'}" data-id="${u.id}" data-v="v16" ${u.finalizada ? 'disabled' : ''}>16:00</button>
+                                            <button class="btn-primary btn-toggle-vuelta ${u.v19 ? 'btn-vuelta-activa' : 'btn-vuelta-apagada'}" data-id="${u.id}" data-v="v19" ${u.finalizada ? 'disabled' : ''}>19:00</button>
                                         </div>
 
                                         <div class="vueltas-counter-display">
-                                            <span>${u.qVueltasTotales}/4</span>
-                                            ${u.qVueltasTotales >= 4 ? '<span class="label-extra-sub">EXTRA ACTIVADO</span>' : ''}
+                                            <span>${u.extraForzado ? 'EXTRA' : u.qVueltasTotales + '/4'}</span>
+                                            ${(u.qVueltasTotales >= 4 || u.extraForzado) ? '<span class="label-extra-sub">EXTRA ACTIVADO</span>' : ''}
                                         </div>
 
-                                        <div class="card-unidad-footer-notes btn-editar-nota-tarjeta" data-id="${u.id}">
+                                        <div class="card-unidad-footer-notes btn-trigger-modal-gestion">
                                             📝 <em>${notaSegura || 'Haga clic para agregar nota...'}</em>
                                         </div>
                                     </article>
@@ -252,6 +287,7 @@ export class DashboardController {
     vincularEventosInteractivosTarjetas() {
         this.unidadesSeccionesContainer.querySelectorAll('.btn-remover-unidad-jornada').forEach(btn => {
             btn.addEventListener('click', async (e) => {
+                e.stopPropagation(); // Previene la apertura colateral del modal de auditoría
                 const id = e.target.getAttribute('data-id');
                 if (confirm("¿Remover esta unidad de la jornada de hoy?")) {
                     await deleteDoc(doc(db, "unidades", id));
@@ -261,9 +297,15 @@ export class DashboardController {
 
         this.unidadesSeccionesContainer.querySelectorAll('.btn-toggle-vuelta').forEach(btn => {
             btn.addEventListener('click', async (e) => {
+                e.stopPropagation(); 
                 const id = e.target.getAttribute('data-id');
                 const campoVuelta = e.target.getAttribute('data-v');
                 const estaPrendida = e.target.classList.contains('btn-vuelta-activa');
+
+                // Disparador de aviso nativo al alcanzar el techo estipulado de 3 vueltas
+                if (!estaPrendida && campoVuelta === 'v16') {
+                    alert("⚠️ ¡JORNADA CUMPLIDA! Esta unidad alcanzó el límite estándar de 3 vueltas.");
+                }
 
                 await updateDoc(doc(db, "unidades", id), {
                     [campoVuelta]: !estaPrendida 
@@ -273,8 +315,13 @@ export class DashboardController {
 
         this.unidadesSeccionesContainer.querySelectorAll('.btn-toggle-campo-express').forEach(badge => {
             badge.addEventListener('click', async (e) => {
+                e.stopPropagation(); 
                 const id = e.target.getAttribute('data-id');
                 const esActivoActualmente = e.target.textContent.includes('CAMPO SÍ');
+                
+                if (!esActivoActualmente) {
+                    alert("🚩 ALERTA: La unidad fue despachada al campo. Solo puede asistir una vez al día.");
+                }
                 
                 await updateDoc(doc(db, "unidades", id), {
                     entregaCampo: !esActivoActualmente
@@ -282,16 +329,54 @@ export class DashboardController {
             });
         });
 
-        this.unidadesSeccionesContainer.querySelectorAll('.btn-editar-nota-tarjeta').forEach(div => {
-            div.addEventListener('click', async (e) => {
-                const id = e.currentTarget.getAttribute('data-id');
-                const nuevaNota = prompt("Ingrese nota u observación de la jornada para este camión:");
-                if (nuevaNota !== null) {
-                    await updateDoc(doc(db, "unidades", id), {
-                        notes: nuevaNota.trim()
-                    });
-                }
+        // Activación del modal nativo Dialog inyectando los datos del nodo DOM seleccionado
+        this.unidadesSeccionesContainer.querySelectorAll('.btn-trigger-modal-gestion').forEach(div => {
+            div.addEventListener('click', (e) => {
+                const card = e.target.closest('.card-unidad-tactica');
+                this.activeUnitIdForDialog = card.getAttribute('data-id');
+                
+                this.dialogInternoDisplay.textContent = card.getAttribute('data-interno');
+                this.dialogNotesArea.value = card.getAttribute('data-notes');
+                this.dialogCheckForceExtra.checked = card.getAttribute('data-force-extra') === 'true';
+
+                this.dialogGestion.showModal(); 
             });
+        });
+    }
+
+    // ==========================================================================
+    // LÓGICA DE CONTROL AVANZADA DEL ELEMENTO DIALOG (MÉTODOS COMPLEMENTADOS)
+    // ==========================================================================
+    setupDialogActions() {
+        if (!this.dialogGestion) return;
+
+        // Cierre manual sin realizar persistencia en base de datos
+        this.btnCloseDialog.addEventListener('click', () => this.dialogGestion.close());
+
+        // Guardado estructurado de novedades y switch manual de extras forzados
+        this.btnSaveDialog.addEventListener('click', async () => {
+            if (!this.activeUnitIdForDialog) return;
+
+            const docRef = doc(db, "unidades", this.activeUnitIdForDialog);
+            await updateDoc(docRef, {
+                notes: this.dialogNotesArea.value.trim(),
+                extraForzado: this.dialogCheckForceExtra.checked
+            });
+
+            this.dialogGestion.close();
+        });
+
+        // Finalización definitiva de jornada con bloqueo estructural de operaciones
+        this.btnFinalizeUnit.addEventListener('click', async () => {
+            if (!this.activeUnitIdForDialog) return;
+
+            if (confirm("¿Confirmar cierre final de jornada laboral para este camión? Se bloqueará la edición de vueltas.")) {
+                const docRef = doc(db, "unidades", this.activeUnitIdForDialog);
+                await updateDoc(docRef, {
+                    finalizada: true
+                });
+                this.dialogGestion.close();
+            }
         });
     }
 
@@ -329,9 +414,6 @@ export class DashboardController {
                         return;
                     }
 
-                    const arrayHistoricoReclamos = datosMaestros.historial_novedades || [];
-                    const registraAlertasMecanicas = arrayHistoricoReclamos.length > 0;
-
                     const dataOperativa = {
                         interno: idInternoEncontrado,
                         chofer: datosMaestros.chofer,
@@ -341,11 +423,9 @@ export class DashboardController {
                         entregaCampo: false, 
                         notes: '',
                         fecha: fechaActualBarra,
-                        v10: false, 
-                        v13: false,
-                        v16: false,
-                        v19: false,
-                        tieneAlertas: registraAlertasMecanicas 
+                        v10: false, v13: false, v16: false, v19: false,
+                        extraForzado: false,
+                        finalizada: false
                     };
 
                     await addDoc(collection(db, "unidades"), dataOperativa);
@@ -371,15 +451,18 @@ export class DashboardController {
     }
 
     renderPedidosList(pedidos) {
-        this.listadoPedidosContainer.innerHTML = pedidos.map(p => `
-            <div class="card-panel manual-order-item-row">
-                <div>
-                    <strong>Orden: #${Sanitizer.escapeHTML(p.numero_pedido)}</strong><br>
-                    <span class="sub-text-dni">DNI: ${Sanitizer.escapeHTML(p.dni_cliente || 'S/D')}</span>
+        this.listadoPedidosContainer.innerHTML = pedidos.map(p => {
+            const iconoFuego = p.esCritico ? ' 🔥' : '';
+            return `
+                <div class="card-panel manual-order-item-row ${p.esCritico ? 'order-item--critical' : ''}">
+                    <div>
+                        <strong>Orden: #${Sanitizer.escapeHTML(p.numero_pedido)}${iconoFuego}</strong><br>
+                        <span class="sub-text-dni">DNI: ${Sanitizer.escapeHTML(p.dni_cliente || 'S/D')}</span>
+                    </div>
+                    <span class="badge badge--info">$${parseFloat(p.importe).toLocaleString('es-AR')}</span>
                 </div>
-                <span class="badge badge--info">$${parseFloat(p.importe).toLocaleString('es-AR')}</span>
-            </div>
-        `).join('') || '<div class="placeholder-vacio-jornada">No hay órdenes cargadas hoy.</div>';
+            `;
+        }).join('') || '<div class="placeholder-vacio-jornada">No hay órdenes cargadas hoy.</div>';
     }
 
     escucharReclamosJornada(fecha) {
@@ -443,31 +526,10 @@ export class DashboardController {
                 this.pedidosCargadosExcel = [];
             }
         });
-
-        if (this.btnProcesar) {
-            this.btnProcesar.addEventListener('click', async () => {
-                if (this.pedidosCargadosExcel.length === 0) return;
-                this.btnProcesar.disabled = true;
-                
-                try {
-                    const fechaActualBarra = this.globalDateFilter.value;
-                    const pedidosEstructurados = this.pedidosCargadosExcel.map(p => ({
-                        ...p,
-                        fecha_creacion: fechaActualBarra
-                    }));
-
-                    await DatabaseService.guardarPedidosMasivos(pedidosEstructurados);
-                    alert("¡Inyección masiva completada con éxito!");
-                    this.pedidosCargadosExcel = [];
-                    this.excelInput.value = "";
-                } catch (err) {
-                    this.btnProcesar.disabled = false;
-                }
-            });
-        }
     }
 }
 
+// Inicialización instantánea al cargar el DOM de la aplicación
 document.addEventListener('DOMContentLoaded', () => {
     const dashboardCtrl = new DashboardController();
     dashboardCtrl.init();

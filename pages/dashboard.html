@@ -26,7 +26,7 @@
     <div class="filter-bar" role="toolbar" aria-label="Filtro global de jornada">
         <div class="filter-group">
             <label for="global-date-filter"><strong>Jornada Operativa de Control:</strong></label>
-            <input type="date" id="global-date-filter" class="select-field" aria-required="true">
+            <input type="date" id="global-date-filter" class="select-field" aria-required="true" onclick="this.showPicker()">
         </div>
     </div>
 
@@ -38,10 +38,8 @@
                 <button id="tab-reclamos" class="tab-btn" role="tab" aria-selected="false" aria-controls="panel-reclamos">Gestión de Reclamos</button>
             </div>
 
-            <!-- SECCIÓN: CONTROL DE UNIDADES DE ALTA VELOCIDAD -->
             <section id="panel-unidades" class="tab-panel active" role="tabpanel" aria-labelledby="tab-unidades">
                 
-                <!-- CONTROL INLINE DE ALTA VELOCIDAD -->
                 <div class="card-panel search-express-bar">
                     <div class="express-inputs-group">
                         <input type="text" id="input-express-unidad" class="select-field" placeholder="INGRESÁ ID UNIDAD O CHOFER + ENTER" aria-label="Identificador express de unidad">
@@ -61,10 +59,8 @@
                     <span class="badge badge--danger">En Horas Extra: <strong id="count-extra">0</strong></span>
                 </div>
 
-                <!-- CONTENEDOR MAESTRO DE CARRILES HORARIOS INTERACTIVOS -->
                 <div id="unidades-secciones-container" class="form-vertical-stack">
-                    <!-- Inyección limpia mediante controladores -->
-                </div>
+                    </div>
             </section>
 
             <section id="panel-pedidos" class="tab-panel" role="tabpanel" aria-labelledby="tab-pedidos" hidden>
@@ -126,7 +122,6 @@
         </div>
     </main>
 
-    <!-- MODAL: CREACIÓN MANUAL DE PEDIDOS -->
     <div id="modal-pedido" class="modal-overlay" aria-hidden="true" role="dialog">
         <div class="modal-content">
             <header class="modal-header">
@@ -172,6 +167,32 @@
             </form>
         </div>
     </div>
+
+    <dialog id="modal-gestion-unidad" class="modal-base-refinado">
+        <div class="modal-content-wrapper">
+            <header class="modal-header-nav">
+                <h3>Gestión Unidad: <span id="modal-interno-display">--</span></h3>
+                <button id="btn-close-gestion-dialog" class="btn-close-x" aria-label="Cerrar modal">&times;</button>
+            </header>
+            <div class="modal-body-form">
+                <div class="form-group">
+                    <label for="modal-notes-area">Observaciones de la Jornada Logística:</label>
+                    <textarea id="modal-notes-area" class="select-field" rows="3" placeholder="Escriba novedades aquí..."></textarea>
+                </div>
+                <div class="banner-extra-toggle-box">
+                    <label class="checkbox-interactive-label">
+                        <input type="checkbox" id="modal-checkbox-force-extra">
+                        <span>FORZAR COMPENSACIÓN / VUELTA EXTRA</span>
+                    </label>
+                    <p class="sub-alert-text">* Al marcarlo, computará horas extra directo en los KPI superiores sin importar las vueltas realizadas.</p>
+                </div>
+            </div>
+            <footer class="modal-actions-footer">
+                <button id="btn-finalizar-jornada-unidad" class="btn-danger-action">FINALIZAR JORNADA UNIDAD</button>
+                <button id="btn-save-gestion-dialog" class="btn-save-action">GUARDAR CAMBIOS</button>
+            </footer>
+        </div>
+    </dialog>
 
     <script type="module" src="../js/controllers/dashboardController.js"></script>
 </body>

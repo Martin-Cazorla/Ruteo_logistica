@@ -3,14 +3,32 @@ import store from '../state/store.js';
 import { MapModule } from '../modules/mapModule.js'; 
 import { db } from '../services/firebaseConfig.js'; 
 import Sanitizer from '../utils/sanitizers.js'; 
-// CORREGIDO: Unificamos la versión de la CDN a la 9.22.0 para evitar incompatibilidad de instancias en memoria
-import { collection, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+import { 
+    collection, 
+    onSnapshot, 
+    query, 
+    where, 
+    getDocs, 
+    doc, 
+    writeBatch 
+} from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
 export class ShippingController {
     constructor() {
         this.mapModule = null;
         this.filterSelect = null;
         this.sidebarContainer = null;
+
+        // ELEMENTOS DEL NUEVO COMPONENTE DIALOG DE DESPACHO MULTIPLE
+        this.dialogAsignacion = document.getElementById('modal-asignacion-flota');
+        this.loteCantidadDisplay = document.getElementById('modal-lote-cantidad');
+        this.selectTransporteLote = document.getElementById('select-transporte-lote');
+        this.btnConfirmarLote = document.getElementById('btn-confirmar-despacho-lote');
+        this.btnCancelarLote = document.getElementById('btn-cancelar-lote');
+        this.btnCloseX = document.getElementById('btn-close-assignment-dialog');
+
+        // Estado interno volátil del controlador de mapas
+        this.loteIdsSeleccionados = [];
     }
 
     init() {
@@ -29,28 +47,51 @@ export class ShippingController {
 
         store.subscribe((state) => this.render(state));
         this.setupEventListeners();
+        this.setupDialogListeners();
         this.conectarPedidosFirestore();
     }
 
     conectarPedidosFirestore() {
         const fechaHoy = new Date().toISOString().split('T')[0];
-        
-        // Al estar unificadas las versiones, 'db' ahora será aceptado perfectamente como primer argumento
         const q = query(collection(db, "pedidos"), where("fecha_creacion", "==", fechaHoy));
 
-        onSnapshot(q, (snapshot) => {
+        onSnapshot(q, async (snapshot) => {
             const pedidosData = [];
+
+            // CROSS-SEARCHING LOGÍSTICO: Traemos los clientes marcados del fichero para acoplar alertas en caliente
+            const clientesSnap = await getDocs(collection(db, "clientes"));
+            const mapClientesCriticos = new Map();
+            const mapClientesPremium = new Map();
+
+            clientesSnap.forEach(cDoc => {
+                const cData = cDoc.data();
+                if (cData.dni) {
+                    mapClientesCriticos.set(String(cData.dni).trim(), !!cData.isCritico);
+                    mapClientesPremium.set(String(cData.dni).trim(), !!cData.isPremium);
+                }
+            });
+
             snapshot.forEach((docSnap) => {
                 const data = docSnap.data();
-                
+                const dniClienteLimpio = data.dni_cliente ? String(data.dni_cliente).trim() : '';
+
+                // El pedido hereda en caliente la condición táctica fijada en la ficha base del cliente
+                const esClienteCriticoBase = mapClientesCriticos.get(dniClienteLimpio) || false;
+                const esClientePremiumBase = mapClientesPremium.get(dniClienteLimpio) || false;
+
+                // Si ya venía marcado como crítico por el formulario de reclamos, sostiene la prioridad alta
+                const determinarCriticidad = data.esCritico || esClienteCriticoBase;
+
                 pedidosData.push({
                     id: docSnap.id,
                     fecha: data.fecha_creacion,
                     franjaHoraria: data.franjaHoraria || '10:00-14:00',
                     importe: data.importe || 0,
-                    esCritico: data.esCritico || false,
-                    motivoCritico: data.motivoCritico || '',
+                    esCritico: determinarCriticidad,
+                    isPremium: esClientePremiumBase, // Inyección de bandera premium para mutación de pines en mapModule
+                    motivoCritico: data.motivoCritico || (esClienteCriticoBase ? 'Cliente clasificado como CRÍTICO en Fichero Base' : ''),
                     numeroPedido: data.numero_pedido || 'S/N',
+                    internoAsignado: data.interno_asignado || null,
                     coordenadas: data.coordenada ? {
                         lat: parseFloat(data.coordenada.lat),
                         lng: parseFloat(data.coordenada.lng)
@@ -82,12 +123,56 @@ export class ShippingController {
         });
     }
 
+    // ==========================================================================
+    // ESCUCHADORES MÓDULO DIALOG DE GESTIÓN DE DESPACHOS MASIVOS
+    // ==========================================================================
+    setupDialogListeners() {
+        if (!this.dialogAsignacion) return;
+
+        const cerrarModal = () => this.dialogAsignacion.close();
+        this.btnCloseX.addEventListener('click', cerrarModal);
+        this.btnCancelarLote.addEventListener('click', cerrarModal);
+
+        // Inyección masiva optimizada por lotes atómicos (Firestore Batches)
+        this.btnConfirmarLote.addEventListener('click', async () => {
+            if (this.loteIdsSeleccionados.length === 0) return;
+            
+            const internoElegido = this.selectTransporteLote.value;
+            if (!internoElegido) {
+                alert("❌ Por favor, seleccione una unidad de transporte válida.");
+                return;
+            }
+
+            try {
+                const batch = writeBatch(db);
+                
+                // Iteramos sobre las órdenes del lazo del mapa adjudicándoles el camión seleccionado
+                this.loteIdsSeleccionados.forEach(pedidoId => {
+                    const pedidoRef = doc(db, "pedidos", pedidoId);
+                    batch.update(pedidoRef, {
+                        interno_asignado: internoElegido
+                    });
+                });
+
+                await batch.commit(); // Ejecución en un único viaje de red (Garantiza atomicidad técnica)
+                alert(`¡Lote de ${this.loteIdsSeleccionados.length} pedidos asignado con éxito al Interno #${internoElegido}!`);
+                this.dialogAsignacion.close();
+            } catch (err) {
+                console.error("Fallo crítico en el procesamiento por lote atómico:", err);
+                alert("Error de red al intentar despachar el lote.");
+            }
+        });
+    }
+
     render(state) {
         const pedidos = state?.pedidos || [];
         const filtros = state?.filtros || { franjaHoraria: 'all' };
 
+        // Filtrado de pedidos: Solo mostramos los que no tienen un camión asignado aún
         const pedidosFiltrados = pedidos.filter(pedido => {
-            return filtros.franjaHoraria === 'all' || pedido.franjaHoraria === filtros.franjaHoraria;
+            const cumpleFranja = filtros.franjaHoraria === 'all' || pedido.franjaHoraria === filtros.franjaHoraria;
+            const estaDisponible = !pedido.internoAsignado; 
+            return cumpleFranja && estaDisponible;
         });
 
         if (this.mapModule) {
@@ -103,7 +188,7 @@ export class ShippingController {
         if (pedidos.length === 0) {
             this.sidebarContainer.innerHTML = `
                 <div style="color: #94a3b8; text-align: center; padding: 2rem; font-size: 0.9rem;">
-                    No hay pedidos para la jornada de hoy.
+                    No hay pedidos disponibles para asignar en esta franja.
                 </div>
             `;
             return;
@@ -114,10 +199,16 @@ export class ShippingController {
             const importeSeguro = parseFloat(p.importe).toLocaleString('es-AR', { minimumFractionDigits: 2 });
             const franjaClass = this._getClassPorFranja(p.franjaHoraria);
 
+            // Inyectamos dinámicamente variaciones visuales en las filas si la cuenta base es crítica o premium
+            let claseAlertaFila = "";
+            let iconoTag = "";
+            if (p.esCritico) { claseAlertaFila = " order-item--critical-alert"; iconoTag = "🔥 "; }
+            else if (p.isPremium) { claseAlertaFila = " order-item--premium-alert"; iconoTag = "⭐ "; }
+
             return `
-                <div class="card-pedido ${franjaClass}" data-id="${Sanitizer.escapeHTML(p.id)}">
+                <div class="card-pedido ${franjaClass}${claseAlertaFila}" data-id="${Sanitizer.escapeHTML(p.id)}">
                     <div class="card-pedido__info">
-                        <span class="card-pedido__number">Orden: <strong>#${numeroSeguro}</strong></span>
+                        <span class="card-pedido__number">${iconoTag}Orden: <strong>#${numeroSeguro}</strong></span>
                         <span class="card-pedido__amount">$${importeSeguro}</span>
                     </div>
                     <div class="card-pedido__meta">
@@ -138,8 +229,31 @@ export class ShippingController {
         }
     }
 
-    handleMassAssignment(selectedIds) {
-        console.log(`Asignando lote de ${selectedIds.length} pedidos.`);
+    // ==========================================================================
+    // PROCESADOR REACTIVO: CAPTURA LOS PEDIDOS DEL LAZO Y ABRE LA INTERFAZ DIALOG
+    // ==========================================================================
+    async handleMassAssignment(selectedIds) {
+        if (!selectedIds || selectedIds.length === 0) return;
+        
+        this.loteIdsSeleccionados = selectedIds;
+        this.loteCantidadDisplay.textContent = selectedIds.length;
+
+        try {
+            // Consultamos en caliente la flota maestra configurada estable para llenar el selector
+            const flotaSnap = await getDocs(collection(db, "flota_maestra"));
+            let optionsHtml = '<option value="">-- Seleccione Unidad de Destino --</option>';
+            
+            flotaSnap.forEach(docSnap => {
+                const f = docSnap.data();
+                optionsHtml += `<option value="${Sanitizer.escapeHTML(docSnap.id)}">Interno #${Sanitizer.escapeHTML(docSnap.id)} - ${Sanitizer.escapeHTML(f.chofer)} (${Sanitizer.escapeHTML(f.tamanio)})</option>`;
+            });
+
+            this.selectTransporteLote.innerHTML = optionsHtml;
+            this.dialogAsignacion.showModal(); // Apertura controlada nativa de HTML5
+            
+        } catch (err) {
+            console.error("Fallo relacional al leer flota_maestra para el lote:", err);
+        }
     }
 }
 

@@ -119,6 +119,7 @@ export class DashboardController {
                 this.pedidoIdEnEdicion = null;
                 this.coordenadasClienteCache = null;
                 this.formManualPedido.reset();
+                this.pDireccionSelectGroup.style.display = "none";
                 this.formManualPedido.querySelector('button[type="submit"]').textContent = "Inyectar Pedido Manual";
                 this.toggleModal(this.modalPedido, true);
             });
@@ -279,60 +280,43 @@ export class DashboardController {
     }
 
     // ==========================================================================
-    // GEOCALIZADOR ASÍNCRONO DEL DASHBOARD COMPLETAMENTE NORMALIZADO
+    // PARSER GEOGRÁFICO INDUSTRIAL OPTIMIZADO PARA PILAR / VILLA ASTOLFI
     // ==========================================================================
-
-    // ==========================================================================
-// PARSER GEOGRÁFICO INDUSTRIAL OPTIMIZADO PARA PILAR / VILLA ASTOLFI
-// ==========================================================================
     async _geocodificarDireccionAsync(direccionTexto) {
-        // Definición estricta de centroides operativos por si la red o API fallan por completo
         const esZonaPilar = direccionTexto.toLowerCase().includes("astolfi") || direccionTexto.toLowerCase().includes("pilar") || direccionTexto.toLowerCase().includes("sanguinetti");
         const latBase = esZonaPilar ? -34.4883 : -34.4824; 
         const lngBase = esZonaPilar ? -58.8514 : -58.5032; 
 
-        // 1. Si los datos ya vienen validados y resguardados en caché por DNI, saltamos el fetch externo
+        // 1. Prioridad absoluta a la caché cargada por el buscador
         if (this.coordenadasClienteCache && !isNaN(this.coordenadasClienteCache.lat)) {
             return this.coordenadasClienteCache;
         }
 
-        // 2. LIMPIEZA TÁCTICA DEL STRING DE DIRECCIÓN
+        // 2. Limpieza estricta de la dirección
         let queryLimpia = direccionTexto.trim();
-
-        // Removemos códigos postales argentinos (ej: B1634BZL o 1634) que Nominatim suele malinterpretar o ignorar desviando el pin
-        queryLimpia = queryLimpia.replace(/[A-Z]?\d{4}[A-Z]{3}/gi, ''); // Remueve formato B1634BZL
-        queryLimpia = queryLimpia.replace(/\b\d{4}\b/g, '');           // Remueve formato 1634 suelto
-
-        // Normalizamos espacios duplicados que hayan quedado tras la limpieza
+        queryLimpia = queryLimpia.replace(/[A-Z]?\d{4}[A-Z]{3}/gi, ''); // Quita códigos tipo B1634BZL
+        queryLimpia = queryLimpia.replace(/\b\d{4}\b/g, '');           // Quita códigos numéricos sueltos
         queryLimpia = queryLimpia.replace(/\s+/g, ' ').trim();
 
-        // 3. REESTRUCTURACIÓN OPERATIVA JERÁRQUICA
-        // Si detectamos que es en tu zona de Villa Astolfi, estructuramos la query de forma limpia para el motor
         if (esZonaPilar) {
-            // Transformamos strings complejos en: "Calle Altura, Villa Astolfi, Pilar, Buenos Aires, Argentina"
             if (!queryLimpia.toLowerCase().includes("pilar")) {
                 queryLimpia += ", Villa Astolfi, Pilar";
             }
         }
 
-        // Añadimos el marco geopolítico obligatorio final si no lo incluye
         if (!queryLimpia.toLowerCase().includes("buenos aires")) { 
             queryLimpia += ", Buenos Aires, Argentina"; 
         }
 
-        console.log("🗺️ Query optimizada enviada a la API de mapas:", queryLimpia);
+        console.log("🗺️ Enviando dirección limpia a Nominatim:", queryLimpia);
 
         try {
-            // Agregamos parámetros clave de Nominatim: countrycodes=ar (obliga a buscar solo en Argentina) 
-            // y addressdetails=1 para mejorar la precisión topográfica.
             const urlApi = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryLimpia)}&countrycodes=ar&limit=1`;
-            
             const respuesta = await fetch(urlApi, { headers: { 'User-Agent': 'Martinez-Routing-Application-v2.5' } });
             
             if (respuesta.ok) {
                 const dataJson = await respuesta.json();
                 if (dataJson && dataJson.length > 0) {
-                    console.log("✅ Geolocalización exitosa de Nominatim:", dataJson[0].display_name);
                     return { 
                         lat: parseFloat(dataJson[0].lat), 
                         lng: parseFloat(dataJson[0].lon) 
@@ -340,12 +324,12 @@ export class DashboardController {
                 }
             }
         } catch (err) { 
-            console.warn("API de mapas saturada o bloqueada por CORS. Derivando a dispersión controlada local."); 
+            console.warn("Fallo de red en API externa. Aplicando contingencia de zona."); 
         }
         
-        // 4. DISPERSIÓN LOGÍSTICA DE RESPALDO (Alineada al partido real del pedido)
-        const variacionLat = (Math.random() - 0.5) * 0.003;
-        const variacionLng = (Math.random() - 0.5) * 0.003;
+        // 3. Si falla la red, calculamos el desvío controlado sobre el nodo logístico real
+        const variacionLat = (Math.random() - 0.5) * 0.002;
+        const variacionLng = (Math.random() - 0.5) * 0.002;
         return { lat: latBase + variacionLat, lng: lngBase + variacionLng }; 
     }
 
@@ -368,8 +352,9 @@ export class DashboardController {
                     const pedidosEstructurados = [];
 
                     for (const p of this.pedidosCargadosExcel) {
+                        // Forzamos limpieza de caché individual para cargas masivas por lote
+                        this.coordenadasClienteCache = null;
                         const coordReal = await this._geocodificarDireccionAsync(p.direccion_entrega);
-                        // Escribimos de forma unificada bajo la propiedad 'coordenada' esperada en DB
                         pedidosEstructurados.push({ ...p, coordenada: coordReal, fecha_creacion: fechaActualBarra });
                     }
 
@@ -392,6 +377,28 @@ export class DashboardController {
 
             if (!direccionFinal) { alert("⚠️ Especifique domicilio."); return; }
 
+            // NUEVO FILTRO DEFENSIVO DE SEGURIDAD INTERNA:
+            // Si el operador saltó la verificación o limpió el input, hacemos un chequeo flash asíncrono
+            // en la colección de clientes maestros usando el DNI antes de enviar a Nominatim.
+            if (!this.coordenadasClienteCache) {
+                const dniConsultado = this.pDniInput.value.trim();
+                if (dniConsultado) {
+                    const qFlash = query(collection(db, "clientes"), where("dni", "==", dniConsultado));
+                    const snapFlash = await getDocs(qFlash);
+                    if (!snapFlash.empty) {
+                        snapFlash.forEach(docSnap => {
+                            const c = docSnap.data();
+                            if (typeof c.latitud !== 'undefined' && typeof c.longitud !== 'undefined') {
+                                this.coordenadasClienteCache = {
+                                    lat: parseFloat(c.latitud),
+                                    lng: parseFloat(c.longitud)
+                                };
+                            }
+                        });
+                    }
+                }
+            }
+
             const coordRealSetteada = await this._geocodificarDireccionAsync(direccionFinal);
 
             const dataManualOrder = {
@@ -400,7 +407,7 @@ export class DashboardController {
                 importe: parseFloat(document.getElementById('p-importe').value),
                 franjaHoraria: document.getElementById('p-franja').value,
                 direccion_entrega: direccionFinal,
-                coordenada: coordRealSetteada, // Propiedad unificada en singular
+                coordenada: coordRealSetteada, 
                 fecha_creacion: this.globalDateFilter.value
             };
 
@@ -531,10 +538,15 @@ export class DashboardController {
         });
     }
 
-    // ==========================================================================
-    // CRUCE INTEGRAL DE DNI CON LA CONFIGURACIÓN PLANA DE CLIENTES CORREGIDO
-    // ==========================================================================
     setupDniCrossSearching() {
+        // EVENTO COMPLEMENTARIO: Si el usuario escribe y cambia el DNI a mano,
+        // vaciamos la caché para forzar al sistema a re-validar al enviar.
+        if (this.pDniInput) {
+            this.pDniInput.addEventListener('input', () => {
+                this.coordenadasClienteCache = null;
+            });
+        }
+
         const btnValidarDni = document.getElementById('btn-verificar-dni');
         if (btnValidarDni && this.pDniInput) {
             btnValidarDni.addEventListener('click', async () => {
@@ -550,8 +562,6 @@ export class DashboardController {
                         const c = docSnap.data();
                         optionsHtml += `<option value="${Sanitizer.escapeHTML(c.direccion)}">${Sanitizer.escapeHTML(c.direccion)}</option>`;
                         
-                        // CORRECCIÓN TÁCTICA: Extraemos 'latitud' y 'longitud' directamente de la raíz
-                        // del documento de clientes (tal como muestra tu captura image_d091be.png)
                         if (typeof c.latitud !== 'undefined' && typeof c.longitud !== 'undefined') {
                             this.coordenadasClienteCache = {
                                 lat: parseFloat(c.latitud),

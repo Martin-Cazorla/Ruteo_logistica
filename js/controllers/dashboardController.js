@@ -367,6 +367,8 @@ export class DashboardController {
         }
     }
 
+// Dentro de js/controllers/dashboardController.js
+
     setupManualOrderFormListener() {
         if (!this.formManualPedido) return;
 
@@ -377,37 +379,48 @@ export class DashboardController {
 
             if (!direccionFinal) { alert("⚠️ Especifique domicilio."); return; }
 
-            // NUEVO FILTRO DEFENSIVO DE SEGURIDAD INTERNA:
-            // Si el operador saltó la verificación o limpió el input, hacemos un chequeo flash asíncrono
-            // en la colección de clientes maestros usando el DNI antes de enviar a Nominatim.
-            if (!this.coordenadasClienteCache) {
-                const dniConsultado = this.pDniInput.value.trim();
-                if (dniConsultado) {
-                    const qFlash = query(collection(db, "clientes"), where("dni", "==", dniConsultado));
-                    const snapFlash = await getDocs(qFlash);
-                    if (!snapFlash.empty) {
-                        snapFlash.forEach(docSnap => {
-                            const c = docSnap.data();
-                            if (typeof c.latitud !== 'undefined' && typeof c.longitud !== 'undefined') {
-                                this.coordenadasClienteCache = {
-                                    lat: parseFloat(c.latitud),
-                                    lng: parseFloat(c.longitud)
-                                };
-                            }
-                        });
+            const dniConsultado = this.pDniInput.value.trim();
+
+            // ==========================================================================
+            // CAPTURA INTERCEPTORA ULTRA-PRECISA POR ID DE DOCUMENTO (DNI)
+            // ==========================================================================
+            // Si la caché está vacía, en lugar de un query con where, le pegamos directo
+            // al documento por su ID único de Firestore (que es el DNI, según tu imagen).
+            if (!this.coordenadasClienteCache && dniConsultado) {
+                try {
+                    // Importante: asegurate que getDoc esté importado de firebase-firestore en la cabecera
+                    // Si no lo está, podés usar la lectura nativa que te armé acá abajo:
+                    const { getDoc } = await import("https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js");
+                    
+                    const clienteRef = doc(db, "clientes", dniConsultado);
+                    const clienteSnap = await getDoc(clienteRef);
+
+                    if (clienteSnap.exists()) {
+                        const cData = clienteSnap.data();
+                        // Extraemos latitud y longitud planos de la raíz (Formato image_307088.png)
+                        if (typeof cData.latitud !== 'undefined' && typeof cData.longitud !== 'undefined') {
+                            this.coordenadasClienteCache = {
+                                lat: parseFloat(cData.latitud),
+                                lng: parseFloat(cData.longitud)
+                            };
+                            console.log("🎯 [INTERCEPTOR] Coordenadas de Pilar recuperadas con éxito por ID:", this.coordenadasClienteCache);
+                        }
                     }
+                } catch (errRef) {
+                    console.warn("No se pudo interceptar por ID de documento de forma directa:", errRef);
                 }
             }
 
+            // Ejecuta el geocodificador (si hay caché, devuelve directo las coordenadas de Pilar)
             const coordRealSetteada = await this._geocodificarDireccionAsync(direccionFinal);
 
             const dataManualOrder = {
-                dni_cliente: this.pDniInput.value.trim(),
+                dni_cliente: dniConsultado,
                 numero_pedido: document.getElementById('p-numero').value.trim(),
                 importe: parseFloat(document.getElementById('p-importe').value),
                 franjaHoraria: document.getElementById('p-franja').value,
                 direccion_entrega: direccionFinal,
-                coordenada: coordRealSetteada, 
+                coordenada: coordRealSetteada, // Guardará la coordenada exacta de Pilar
                 fecha_creacion: this.globalDateFilter.value
             };
 
@@ -416,11 +429,13 @@ export class DashboardController {
                     await updateDoc(doc(db, "pedidos", this.pedidoIdEnEdicion), dataManualOrder);
                     alert(`¡Orden modificada con éxito!`);
                 } else {
-                    dataManualOrder.esCritico = false; dataManualOrder.interno_asignado = null;
+                    dataManualOrder.esCritico = false; 
+                    dataManualOrder.interno_asignado = null;
                     await addDoc(collection(db, "pedidos"), dataManualOrder);
                     alert(`¡Pedido manual guardado con éxito!`);
                 }
 
+                // Reseteo de control operativo
                 this.pedidoIdEnEdicion = null;
                 this.coordenadasClienteCache = null;
                 this.formManualPedido.reset();

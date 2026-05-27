@@ -7,8 +7,8 @@ export class MapModule {
      * @param {Function} onSelectionCallback Ejecutado al seleccionar múltiples pedidos en mapa
      */
     constructor(mapElementId, onSelectionCallback) {
-        // Inicialización del contenedor centrado en Buenos Aires
-        this.map = L.map(mapElementId).setView([-34.6037, -58.3816], 12);
+        // Inicialización del mapa enfocado por defecto en el nodo logístico de Martínez/Norte
+        this.map = L.map(mapElementId).setView([-34.4824, -58.5032], 12);
         this.markerCluster = L.markerClusterGroup();
         this.onSelection = onSelectionCallback;
         this.currentMarkers = new Map();
@@ -25,7 +25,6 @@ export class MapModule {
     }
 
     _initTileLayer() {
-        // Capa de mapas topográficos provista por Esri con soporte HTTP/2 nativo
         const tiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
             maxZoom: 19,
             attribution: 'Tiles &copy; Esri &mdash; Esri, GIS User Community'
@@ -33,7 +32,6 @@ export class MapModule {
         
         this.map.addLayer(this.markerCluster);
 
-        // Ajuste reactivo del tamaño del viewport para evitar renderizados parciales grisáceos
         tiles.once('tileload', () => {
             setTimeout(() => {
                 if (this.map) {
@@ -56,40 +54,36 @@ export class MapModule {
         this.markerCluster.clearLayers();
         this.currentMarkers.clear();
 
+        const bounds = []; // Array para almacenar posiciones y encuadrar el mapa dinámicamente
+
         pedidos.forEach(pedido => {
             if (!pedido) return;
 
-            // ==========================================================================
-            // ALGORITMO DEFENSIVO DE EXTRACCIÓN GEOESPACIAL MULTI-FORMATO
-            // ==========================================================================
             let lat = null;
             let lng = null;
 
             if (pedido.coordenadas) {
                 lat = pedido.coordenadas.lat;
                 lng = pedido.coordenadas.lng;
-            } else if (pedido.coordenada) { // Estructura de colección /pedidos en Firestore
+            } else if (pedido.coordenada) {
                 lat = pedido.coordenada.lat;
                 lng = pedido.coordenada.lng;
-            } else if (typeof pedido.latitud !== 'undefined' && typeof pedido.longitud !== 'undefined') { // Estructura plana de clientes
+            } else if (typeof pedido.latitud !== 'undefined' && typeof pedido.longitud !== 'undefined') {
                 lat = pedido.latitud;
                 lng = pedido.longitud;
             }
 
-            // Sanitización tipográfica a números de punto flotante de precisión
             const parsedLat = parseFloat(lat);
             const parsedLng = parseFloat(lng);
 
-            // Control de exclusión: Si las coordenadas no son numéricas o apuntan al cero absoluto, se descarta el pin
             if (isNaN(parsedLat) || isNaN(parsedLng) || parsedLat === 0 || parsedLng === 0) {
-                console.warn(`⚠️ Pedido #${pedido.numeroPedido || 'S/N'} omitido en mapa por inconsistencia en campos geoespaciales.`);
+                console.warn(`⚠️ Pedido #${pedido.numeroPedido || 'S/N'} omitido por campos geoespaciales corruptos.`);
                 return;
             }
 
             const colorClass = this._getColorByFranja(pedido.franjaHoraria);
             let markerOptions = {};
 
-            // Renderizado de iconos especiales dinámicos para contingencias críticas
             if (pedido.esCritico || pedido.critico) {
                 const fireIcon = L.divIcon({
                     className: `marker-critical-fire ${colorClass}`,
@@ -113,7 +107,14 @@ export class MapModule {
 
             this.markerCluster.addLayer(marker);
             this.currentMarkers.set(pedido.id, marker);
+            bounds.push([parsedLat, parsedLng]); // Registramos la ubicación válida para el encuadre
         });
+
+        // ENCUADRE AUTOMÁTICO INTELIGENTE: Si hay pines cargados, el mapa se enfoca y hace zoom solo 
+        // rodeando los marcadores activos (evita que se quede clavado lejos en Martínez si estás en Pilar)
+        if (bounds.length > 0 && this.map) {
+            this.map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+        }
     }
 
     _getColorByFranja(franja) {

@@ -20,7 +20,8 @@ export class ShippingController {
         this.sidebarContainer = null;
         this.mapDateFilter = document.getElementById('map-date-filter');
 
-        this.dialogAsignacion = document.getElementById('modal-assignment-flota');
+        // CORREGIDO: ID alineado con el archivo shipping.html ("modal-asignacion-flota")
+        this.dialogAsignacion = document.getElementById('modal-asignacion-flota');
         this.loteCantidadDisplay = document.getElementById('modal-lote-cantidad');
         this.selectTransporteLote = document.getElementById('select-transporte-lote');
         this.btnConfirmarLote = document.getElementById('btn-confirmar-despacho-lote');
@@ -56,12 +57,6 @@ export class ShippingController {
         this.sincronizarMapaPorFecha(); 
     }
 
-    sincronizarPageSize() {
-        if (this.mapModule && this.mapModule.map) {
-            this.mapModule.map.invalidateSize();
-        }
-    }
-
     sincronizarMapaPorFecha() {
         if (!this.mapDateFilter) return;
         const fechaSeleccionada = this.mapDateFilter.value;
@@ -95,7 +90,7 @@ export class ShippingController {
                 const esClientePremiumBase = mapClientesPremium.get(DniLimpio) || false;
                 const determinarCriticidad = data.esCritico || esClienteCriticoBase;
 
-                // NORMALIZACIÓN DE INSTANCIA EXTRACTORA ANTES DE ENVIAR AL STORE
+                // NORMALIZACIÓN GEOESPACIAL DE LECTURA FIRESTORE
                 let latExtraida = null;
                 let lngExtraida = null;
 
@@ -105,8 +100,12 @@ export class ShippingController {
                 } else if (data.coordenadas) {
                     latExtraida = data.coordenadas.lat;
                     lngExtraida = data.coordenadas.lng;
+                } else if (typeof data.latitud !== 'undefined' && typeof data.longitud !== 'undefined') {
+                    latExtraida = data.latitud;
+                    lngExtraida = data.longitud;
                 }
 
+                // UNIFICACIÓN OPERATIVA DE PROPIEDADES (Doble lectura de seguridad para guiones bajos y camelCase)
                 pedidosData.push({
                     id: docSnap.id,
                     fecha: data.fecha_creacion,
@@ -115,7 +114,7 @@ export class ShippingController {
                     esCritico: determinarCriticidad,
                     isPremium: esClientePremiumBase, 
                     motivoCritico: data.motivoCritico || (esClienteCriticoBase ? 'Cliente clasificado como CRÍTICO en Fichero Base' : ''),
-                    numeroPedido: data.numero_pedido || data.numeroPedido || 'S/N',
+                    numeroPedido: data.numero_pedido || data.numeroPedido || 'S/N', // 👈 Mapeado unificado para UI y MapModule
                     internoAsignado: data.interno_asignado || null,
                     direccion: data.direccion_entrega || data.direccion || '',
                     coordenadas: {
@@ -131,7 +130,7 @@ export class ShippingController {
                 pedidos: pedidosData
             });
         }, (error) => {
-            console.error("Fallo de sincronización: ", error);
+            console.error("Fallo de sincronización en tiempo real: ", error);
         });
     }
 
@@ -150,27 +149,30 @@ export class ShippingController {
     setupDialogListeners() {
         if (!this.dialogAsignacion) return;
         const cerrarModal = () => this.dialogAsignacion.close();
-        this.btnCloseX.addEventListener('click', cerrarModal);
-        this.btnCancelarLote.addEventListener('click', cerrarModal);
+        
+        if (this.btnCloseX) this.btnCloseX.addEventListener('click', cerrarModal);
+        if (this.btnCancelarLote) this.btnCancelarLote.addEventListener('click', cerrarModal);
 
-        this.btnConfirmarLote.addEventListener('click', async () => {
-            if (this.loteIdsSeleccionados.length === 0) return;
-            const internoElegido = this.selectTransporteLote.value;
-            if (!internoElegido) {
-                alert("❌ Seleccione una unidad válida.");
-                return;
-            }
+        if (this.btnConfirmarLote) {
+            this.btnConfirmarLote.addEventListener('click', async () => {
+                if (this.loteIdsSeleccionados.length === 0) return;
+                const internoElegido = this.selectTransporteLote.value;
+                if (!internoElegido) {
+                    alert("❌ Seleccione una unidad válida.");
+                    return;
+                }
 
-            try {
-                const batch = writeBatch(db);
-                this.loteIdsSeleccionados.forEach(pedidoId => {
-                    batch.update(doc(db, "pedidos", pedidoId), { interno_asignado: internoElegido });
-                });
-                await batch.commit();
-                alert(`¡Lote asignado con éxito al Interno #${internoElegido}!`);
-                this.dialogAsignacion.close();
-            } catch (err) { console.error(err); }
-        });
+                try {
+                    const batch = writeBatch(db);
+                    this.loteIdsSeleccionados.forEach(pedidoId => {
+                        batch.update(doc(db, "pedidos", pedidoId), { interno_asignado: internoElegido });
+                    });
+                    await batch.commit();
+                    alert(`¡Lote asignado con éxito al Interno #${internoElegido}!`);
+                    this.dialogAsignacion.close();
+                } catch (err) { console.error("Error al despachar lote:", err); }
+            });
+        }
     }
 
     render(state) {
@@ -185,7 +187,9 @@ export class ShippingController {
 
         if (this.mapModule) {
             this.mapModule.updateMarkers(pedidosFiltrados);
-            this.mapModule.map.invalidateSize();
+            if (this.mapModule.map) {
+                this.mapModule.map.invalidateSize();
+            }
         }
         this.renderListSidebar(pedidosFiltrados);
     }
@@ -243,7 +247,7 @@ export class ShippingController {
                 optionsHtml += `<option value="${Sanitizer.escapeHTML(docSnap.id)}">Interno #${Sanitizer.escapeHTML(docSnap.id)} - ${Sanitizer.escapeHTML(f.chofer)}</option>`;
             });
             this.selectTransporteLote.innerHTML = optionsHtml;
-            this.dialogAsignacion.showModal();
+            if (this.dialogAsignacion) this.dialogAsignacion.showModal();
         } catch (err) { console.error(err); }
     }
 }

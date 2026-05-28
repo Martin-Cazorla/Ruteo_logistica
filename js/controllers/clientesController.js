@@ -106,12 +106,12 @@ export class ClientesController {
             keyboard: true,
         });
 
-        // ✅ CartoDB Positron — tiles claros, sin restricción CORS, gratuitos
-        // Alternativa profesional a OSM para producción sin backend
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            maxZoom: 19,
-            subdomains: 'abcd',
-            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/">CARTO</a>',
+        // ✅ Tiles de OpenStreetMap Francia — estables, sin CORS, sin límite agresivo
+        // Es el servidor de tiles más permisivo para proyectos sin backend
+        L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+            maxZoom: 20,
+            subdomains: 'abc',
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         }).addTo(this.#mapaAuxiliar);
 
         this.#marcadorMovible = L.marker([lat, lng], { draggable: true })
@@ -185,20 +185,29 @@ export class ClientesController {
      * @param {string} direccionTexto
      * @returns {Promise<{lat: number, lng: number, esFallback: boolean}>}
      */
-    
+
     async #consultarNominatim(direccionTexto) {
         let query = Sanitizer.sanitizeText(direccionTexto);
         const queryLower = query.toLowerCase();
 
-        // Agregar contexto geográfico si no está presente
         if (!queryLower.includes('buenos aires') && !queryLower.includes('argentina')) {
             query += ', Buenos Aires, Argentina';
         }
 
-        // ✅ Photon (komoot) — geocodificador OSM sin restricción CORS
-        // Documentación: https://photon.komoot.io/
-        const url = `https://photon.komoot.io/api/?q=${Sanitizer.sanitizeForUrl(query)}&limit=1&lang=es&bbox=-63.983,-41.035,-53.533,-33.261`;
-        //                                                                                    ↑ bbox de la Provincia de Buenos Aires
+        // ✅ Photon con location bias centrado en Martínez (zona operativa)
+        // Usamos lat/lon + zoom en lugar de bbox — evita el HTTP 400 y da mejores resultados
+        // en zonas del GBA donde el bbox era demasiado restrictivo
+        // Formato correcto de bbox si alguna vez se necesita: minLon,minLat,maxLon,maxLat
+        const params = new URLSearchParams({
+            q:      query,
+            limit:  '1',
+            lang:   'es',
+            lat:    String(COORDENADAS_DEFAULT.lat),  // -34.4897 (Martínez)
+            lon:    String(COORDENADAS_DEFAULT.lng),  // -58.5210
+            zoom:   '14',                             // radio de bias ~barrio
+        });
+
+        const url = `https://photon.komoot.io/api/?${params.toString()}`;
 
         try {
             const respuesta = await fetch(url, {
@@ -211,7 +220,7 @@ export class ClientesController {
 
             const datos = await respuesta.json();
 
-            // Photon devuelve GeoJSON: features[0].geometry.coordinates = [lng, lat]
+            // Photon devuelve GeoJSON: coordinates = [lng, lat]  ← orden invertido al estándar
             if (datos?.features?.length > 0) {
                 const [lng, lat] = datos.features[0].geometry.coordinates;
 
@@ -220,6 +229,7 @@ export class ClientesController {
                     return { lat, lng, esFallback: false };
                 }
             }
+
         } catch (err) {
             if (err.name === 'TimeoutError') {
                 console.warn('[Geocodificación] Timeout — Photon no respondió en 8s.');
@@ -228,7 +238,6 @@ export class ClientesController {
             }
         }
 
-        // Fallback: mantener última posición conocida
         return {
             lat: this.#coordenadasSeleccionadas.lat,
             lng: this.#coordenadasSeleccionadas.lng,

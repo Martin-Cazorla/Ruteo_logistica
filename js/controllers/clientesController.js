@@ -22,12 +22,11 @@ export class ClientesController {
         this.unsubscribeClientes = null;
         this.cacheClientesList = []; 
 
-        // Infraestructura del Mapa de Asistencia Técnica Interno
         this.mapaAuxiliar = null;
         this.marcadorMovible = null;
         
-        // Coordenadas iniciales neutras (Centro de Buenos Aires por si la API tarda en responder)
-        this.coordenadasSeleccionadas = { lat: -34.6037, lng: -58.3816 }; 
+        // Coordenadas neutras por defecto (Obelisco, Buenos Aires) para inicialización limpia
+        this.coordenadasSeleccionadas = { lat: -34.603722, lng: -58.381592 }; 
     }
 
     init() {
@@ -43,7 +42,7 @@ export class ClientesController {
         const mapDiv = document.getElementById('mapa-auxiliar-cliente');
         if (!mapDiv || typeof L === 'undefined') return;
 
-        this.mapaAuxiliar = L.map('mapa-auxiliar-cliente').setView([this.coordenadasSeleccionadas.lat, this.coordenadasSeleccionadas.lng], 12);
+        this.mapaAuxiliar = L.map('mapa-auxiliar-cliente').setView([this.coordenadasSeleccionadas.lat, this.coordenadasSeleccionadas.lng], 11);
         
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
             maxZoom: 19,
@@ -58,7 +57,7 @@ export class ClientesController {
             const posicionActual = e.target.getLatLng();
             this.coordenadasSeleccionadas.lat = posicionActual.lat;
             this.coordenadasSeleccionadas.lng = posicionActual.lng;
-            console.log("📍 Ubicación ajustada visualmente:", this.coordenadasSeleccionadas);
+            console.log("📍 Coordenada fijada por el operador:", this.coordenadasSeleccionadas);
         });
     }
 
@@ -70,7 +69,7 @@ export class ClientesController {
             if (direccionTexto.length < 4) return;
 
             this.btnSubmit.disabled = true;
-            this.btnSubmit.textContent = "Buscando aproximación de domicilio...";
+            this.btnSubmit.textContent = "Buscando proximidades automáticamente...";
 
             const resultadoGeo = await this._consultarApiGeocodingAsync(direccionTexto);
             
@@ -81,7 +80,7 @@ export class ClientesController {
                 const nuevaPosicion = new L.LatLng(resultadoGeo.lat, resultadoGeo.lng);
                 
                 this.marcadorMovible.setLatLng(nuevaPosicion);
-                this.mapaAuxiliar.setView(nuevaPosicion, 15);
+                this.mapaAuxiliar.setView(nuevaPosicion, 16); // Enfoque de alta densidad
                 
                 setTimeout(() => { this.mapaAuxiliar.invalidateSize(); }, 100);
             }
@@ -94,13 +93,13 @@ export class ClientesController {
     async _consultarApiGeocodingAsync(direccionTexto) {
         let queryLimpia = direccionTexto.trim();
         
-        // 🎯 CORRECCIÓN LOGÍSTICA CENTRAL: Quitamos la inyección forzada de "Pilar" para permitir buscar Olivos, San Isidro, etc.
+        // 🎯 SOLUCIÓN MULTIZONA: Evita concatenar forzadamente 'Pilar' para permitir resoluciones en Olivos, Martínez, etc.
         if (!queryLimpia.toLowerCase().includes("buenos aires") && !queryLimpia.toLowerCase().includes("caba")) {
             queryLimpia += ", Buenos Aires, Argentina";
         }
 
         try {
-            await new Promise(res => setTimeout(res, 350));
+            await new Promise(res => setTimeout(res, 350)); // Respeto estricto del Rate Limit de la API externa
             const urlApi = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryLimpia)}&countrycodes=ar&limit=1`;
             const respuesta = await fetch(urlApi, { headers: { 'User-Agent': 'Martinez-Routing-Application-v2.5' } });
             
@@ -114,9 +113,10 @@ export class ClientesController {
                 }
             }
         } catch (err) {
-            console.warn("API externa no disponible. Usando fallback de memoria.");
+            console.warn("API de geocodificación saturada temporalmente.");
         }
 
+        // Si falla la API externa, retorna el centroide de la última posición del marcador
         return { lat: this.coordenadasSeleccionadas.lat, lng: this.coordenadasSeleccionadas.lng };
     }
 
@@ -133,7 +133,7 @@ export class ClientesController {
             const payloadCliente = {
                 dni: dniDocumento,
                 nombre: this.nombreInput.value.trim().toUpperCase(),
-                telefono: this.telefonoInput.value.trim(), // Se inyecta correctamente
+                telefono: this.telefonoInput.value.trim(), 
                 direccion: this.direccionInput.value.trim(),
                 coordenadas: {
                     lat: this.coordenadasSeleccionadas.lat,
@@ -143,23 +143,12 @@ export class ClientesController {
                 premium: this.checkPremium.checked,
                 isPremium: this.checkPremium.checked, 
                 isCritico: this.checkCritico.checked,
-                motivoCritico: this.checkCritico.checked ? "Cuenta con historial de reclamos de ruteo" : "",
+                motivoCritico: this.checkCritico.checked ? "Cuenta parametrizada con criticidad logística" : "",
                 historialReclamos: []
             };
 
             try {
-                // Almacenamos en Firebase
                 await DatabaseService.guardarCliente(payloadCliente);
-                
-                // 🎯 REPARACIÓN DE PERSISTENCIA MAESTRA: Como tu DatabaseService original no mapea "telefono",
-                // forzamos una mutación complementaria directa para asegurar que el dato no se pierda en Firestore
-                import("https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js").then(async (sdk) => {
-                    const { db } = await import('../services/firebaseConfig.js');
-                    await sdk.updateDoc(sdk.doc(db, "clientes", dniDocumento), {
-                        telefono: payloadCliente.telefono
-                    });
-                });
-
                 alert(`¡Excelente! Cliente #${dniDocumento} guardado con éxito logístico de coordenadas fijadas.`);
                 this.limpiarFormulario();
             } catch (err) {
@@ -200,11 +189,11 @@ export class ClientesController {
             const idSeguro = Sanitizer.escapeHTML(c.id);
             const dniSeguro = Sanitizer.escapeHTML(c.dni || c.id);
             const nomSeguro = Sanitizer.escapeHTML(c.nombre || 'S/N');
-            const telSeguro = Sanitizer.escapeHTML(c.telefono || 'S/T'); // Asegura renderizado del teléfono
+            const telSeguro = Sanitizer.escapeHTML(c.telefono || 'S/T'); 
             const dirSeguro = Sanitizer.escapeHTML(c.direccion || 'No especificada');
             
-            const latFichero = c.coordenadas?.lat || c.latitud || -34.6037;
-            const lngFichero = c.coordenadas?.lng || c.longitud || -58.3816;
+            const latFichero = c.coordenadas?.lat || c.latitud || -34.603722;
+            const lngFichero = c.coordenadas?.lng || c.longitud || -58.381592;
             const esPremium = !!c.isPremium || !!c.premium;
             const esCritico = !!c.isCritico || !!c.critico;
 
@@ -257,7 +246,7 @@ export class ClientesController {
                 this.dniInput.disabled = true; 
                 
                 this.nombreInput.value = b.getAttribute('data-nombre');
-                this.telefonoInput.value = b.getAttribute('data-telefono'); // Rehidrata el campo teléfono correctamente
+                this.telefonoInput.value = b.getAttribute('data-telefono'); 
                 this.direccionInput.value = b.getAttribute('data-direccion');
                 this.checkPremium.checked = b.getAttribute('data-premium') === 'true';
                 this.checkCritico.checked = b.getAttribute('data-critico') === 'true';
@@ -309,11 +298,11 @@ export class ClientesController {
         this.btnSubmit.textContent = "Guardar Cliente en Base";
         if (this.btnCancel) this.btnCancel.style.display = "none";
         
-        this.coordenadasSeleccionadas = { lat: -34.6037, lng: -58.3816 };
+        this.coordenadasSeleccionadas = { lat: -34.603722, lng: -58.381592 };
         if (this.mapaAuxiliar && this.marcadorMovible) {
             const posBase = new L.LatLng(this.coordenadasSeleccionadas.lat, this.coordenadasSeleccionadas.lng);
             this.marcadorMovible.setLatLng(posBase);
-            this.mapaAuxiliar.setView(posBase, 12);
+            this.mapaAuxiliar.setView(posBase, 11);
         }
     }
 

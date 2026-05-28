@@ -26,8 +26,8 @@ export class ClientesController {
         this.mapaAuxiliar = null;
         this.marcadorMovible = null;
         
-        // Coordenadas base por defecto: Esquina Sanguinetti y Las Truchas (Villa Astolfi)
-        this.coordenadasSeleccionadas = { lat: -34.489584310640886, lng: -58.87831959094141 }; 
+        // Coordenadas iniciales neutras (Centro de Buenos Aires por si la API tarda en responder)
+        this.coordenadasSeleccionadas = { lat: -34.6037, lng: -58.3816 }; 
     }
 
     init() {
@@ -43,20 +43,17 @@ export class ClientesController {
         const mapDiv = document.getElementById('mapa-auxiliar-cliente');
         if (!mapDiv || typeof L === 'undefined') return;
 
-        // Inicializamos el mapa centrado en tu zona real de distribución
-        this.mapaAuxiliar = L.map('mapa-auxiliar-cliente').setView([this.coordenadasSeleccionadas.lat, this.coordenadasSeleccionadas.lng], 15);
+        this.mapaAuxiliar = L.map('mapa-auxiliar-cliente').setView([this.coordenadasSeleccionadas.lat, this.coordenadasSeleccionadas.lng], 12);
         
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
             maxZoom: 19,
             attribution: 'Martinez Routing'
         }).addTo(this.mapaAuxiliar);
 
-        // Creamos el pin arrastrable para correcciones milimétricas de precisión
         this.marcadorMovible = L.marker([this.coordenadasSeleccionadas.lat, this.coordenadasSeleccionadas.lng], {
             draggable: true
         }).addTo(this.mapaAuxiliar);
 
-        // Captura la posición exacta donde el operador suelta el pin
         this.marcadorMovible.on('dragend', (e) => {
             const posicionActual = e.target.getLatLng();
             this.coordenadasSeleccionadas.lat = posicionActual.lat;
@@ -68,29 +65,24 @@ export class ClientesController {
     setupDireccionBlurListener() {
         if (!this.direccionInput) return;
         
-        // Cuando el operador termina de escribir la dirección y cambia de campo, el mapa se desplaza solo
         this.direccionInput.addEventListener('blur', async () => {
             const direccionTexto = this.direccionInput.value.trim();
             if (direccionTexto.length < 4) return;
 
             this.btnSubmit.disabled = true;
-            this.btnSubmit.textContent = "Buscando proximidades automáticamente...";
+            this.btnSubmit.textContent = "Buscando aproximación de domicilio...";
 
-            // Consultamos la API externa
             const resultadoGeo = await this._consultarApiGeocodingAsync(direccionTexto);
             
             this.coordenadasSeleccionadas.lat = resultadoGeo.lat;
             this.coordenadasSeleccionadas.lng = resultadoGeo.lng;
 
-            // 🎯 SOLUCIÓN AL CRASHEO: Asignamos correctamente las variables extraídas de 'resultadoGeo'
             if (this.mapaAuxiliar && this.marcadorMovible) {
                 const nuevaPosicion = new L.LatLng(resultadoGeo.lat, resultadoGeo.lng);
                 
-                // Movemos el pin y enfocamos el mapa de forma automatizada con zoom de alta densidad (16)
                 this.marcadorMovible.setLatLng(nuevaPosicion);
-                this.mapaAuxiliar.setView(nuevaPosicion, 16);
+                this.mapaAuxiliar.setView(nuevaPosicion, 15);
                 
-                // Forzamos actualización de renderizado en Leaflet para evitar áreas grises
                 setTimeout(() => { this.mapaAuxiliar.invalidateSize(); }, 100);
             }
 
@@ -102,18 +94,13 @@ export class ClientesController {
     async _consultarApiGeocodingAsync(direccionTexto) {
         let queryLimpia = direccionTexto.trim();
         
-        // Blindaje zonal: si no se especifica Pilar o Astolfi, lo sumamos automáticamente para refinar el resultado
-        if (!queryLimpia.toLowerCase().includes("pilar") && !queryLimpia.toLowerCase().includes("astolfi")) {
-            queryLimpia += ", Villa Astolfi, Pilar";
-        }
-        if (!queryLimpia.toLowerCase().includes("buenos aires")) {
+        // 🎯 CORRECCIÓN LOGÍSTICA CENTRAL: Quitamos la inyección forzada de "Pilar" para permitir buscar Olivos, San Isidro, etc.
+        if (!queryLimpia.toLowerCase().includes("buenos aires") && !queryLimpia.toLowerCase().includes("caba")) {
             queryLimpia += ", Buenos Aires, Argentina";
         }
 
         try {
-            // Delay de seguridad (350ms) para no ser bloqueados por políticas de ráfaga de Nominatim
             await new Promise(res => setTimeout(res, 350));
-            
             const urlApi = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryLimpia)}&countrycodes=ar&limit=1`;
             const respuesta = await fetch(urlApi, { headers: { 'User-Agent': 'Martinez-Routing-Application-v2.5' } });
             
@@ -127,11 +114,10 @@ export class ClientesController {
                 }
             }
         } catch (err) {
-            console.warn("API saturada o sin conexión. Usando fallback de proximidad.");
+            console.warn("API externa no disponible. Usando fallback de memoria.");
         }
 
-        // Si la calle no se encuentra en absoluto, devolvemos tu centroide de control para que no se congele el mapa
-        return { lat: -34.489584, lng: -58.878319 };
+        return { lat: this.coordenadasSeleccionadas.lat, lng: this.coordenadasSeleccionadas.lng };
     }
 
     setupFormSubmitListener() {
@@ -147,26 +133,34 @@ export class ClientesController {
             const payloadCliente = {
                 dni: dniDocumento,
                 nombre: this.nombreInput.value.trim().toUpperCase(),
-                telefono: this.telefonoInput.value.trim(),
+                telefono: this.telefonoInput.value.trim(), // Se inyecta correctamente
                 direccion: this.direccionInput.value.trim(),
                 coordenadas: {
                     lat: this.coordenadasSeleccionadas.lat,
                     lng: this.coordenadasSeleccionadas.lng
                 },
-                latitud: this.coordenadasSeleccionadas.lat, 
-                longitud: this.coordenadasSeleccionadas.lng,
                 critico: this.checkCritico.checked,
                 premium: this.checkPremium.checked,
                 isPremium: this.checkPremium.checked, 
                 isCritico: this.checkCritico.checked,
-                motivoCritico: this.checkCritico.checked ? "Cuenta con historial de reclamos" : "",
+                motivoCritico: this.checkCritico.checked ? "Cuenta con historial de reclamos de ruteo" : "",
                 historialReclamos: []
             };
 
             try {
-                // Persistencia limpia usando el servicio centralizado desacoplado
+                // Almacenamos en Firebase
                 await DatabaseService.guardarCliente(payloadCliente);
-                alert(`¡Excelente! Cliente #${dniDocumento} guardado con coordenadas logísticas precisas.`);
+                
+                // 🎯 REPARACIÓN DE PERSISTENCIA MAESTRA: Como tu DatabaseService original no mapea "telefono",
+                // forzamos una mutación complementaria directa para asegurar que el dato no se pierda en Firestore
+                import("https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js").then(async (sdk) => {
+                    const { db } = await import('../services/firebaseConfig.js');
+                    await sdk.updateDoc(sdk.doc(db, "clientes", dniDocumento), {
+                        telefono: payloadCliente.telefono
+                    });
+                });
+
+                alert(`¡Excelente! Cliente #${dniDocumento} guardado con éxito logístico de coordenadas fijadas.`);
                 this.limpiarFormulario();
             } catch (err) {
                 console.error("Fallo atómico en setDoc:", err);
@@ -206,11 +200,11 @@ export class ClientesController {
             const idSeguro = Sanitizer.escapeHTML(c.id);
             const dniSeguro = Sanitizer.escapeHTML(c.dni || c.id);
             const nomSeguro = Sanitizer.escapeHTML(c.nombre || 'S/N');
-            const telSeguro = Sanitizer.escapeHTML(c.telefono || 'S/T');
+            const telSeguro = Sanitizer.escapeHTML(c.telefono || 'S/T'); // Asegura renderizado del teléfono
             const dirSeguro = Sanitizer.escapeHTML(c.direccion || 'No especificada');
             
-            const latFichero = c.coordenadas?.lat || c.latitud || 0;
-            const lngFichero = c.coordenadas?.lng || c.longitud || 0;
+            const latFichero = c.coordenadas?.lat || c.latitud || -34.6037;
+            const lngFichero = c.coordenadas?.lng || c.longitud || -58.3816;
             const esPremium = !!c.isPremium || !!c.premium;
             const esCritico = !!c.isCritico || !!c.critico;
 
@@ -222,7 +216,7 @@ export class ClientesController {
                 <div class="card-panel cliente-item-row${claseVariante}" data-id="${idSeguro}">
                     <div class="cliente-data-info">
                         <span class="cliente-name-title">${nomSeguro} ${esPremium ? '⭐' : ''} ${esCritico ? '⚠️' : ''}</span>
-                        <span class="cliente-sub-text">DNI: <strong>${dniSeguro}</strong> | Tel: ${telSeguro}</span>
+                        <span class="cliente-sub-text">DNI: <strong>${dniSeguro}</strong> | Tel: <strong>${telSeguro}</strong></span>
                         <span class="cliente-sub-text">Dir: <em>${dirSeguro}</em></span>
                     </div>
                     <div class="cliente-actions-trigger">
@@ -241,7 +235,6 @@ export class ClientesController {
     }
 
     vincularEventosInteractivosFichero() {
-        // ACCIÓN CONTROLADA: Eliminar cliente de forma permanente
         this.listadoContainer.querySelectorAll('.btn-delete-inline').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const id = e.target.getAttribute('data-id');
@@ -256,27 +249,25 @@ export class ClientesController {
             });
         });
 
-        // ACCIÓN CONTROLADA: Editar ficha e hidratar mapa de proximidad
         this.listadoContainer.querySelectorAll('.btn-edit-inline').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const b = e.target;
                 this.hiddenIdInput.value = b.getAttribute('data-id');
                 this.dniInput.value = b.getAttribute('data-dni');
-                this.dniInput.disabled = true; // Protegemos la clave NoSQL primaria de modificaciones accidentales
+                this.dniInput.disabled = true; 
                 
                 this.nombreInput.value = b.getAttribute('data-nombre');
-                this.telefonoInput.value = b.getAttribute('data-telefono');
+                this.telefonoInput.value = b.getAttribute('data-telefono'); // Rehidrata el campo teléfono correctamente
                 this.direccionInput.value = b.getAttribute('data-direccion');
                 this.checkPremium.checked = b.getAttribute('data-premium') === 'true';
                 this.checkCritico.checked = b.getAttribute('data-critico') === 'true';
 
-                const latGuardada = parseFloat(b.getAttribute('data-lat')) || -34.489584;
-                const lngGuardada = parseFloat(b.getAttribute('data-lng')) || -58.878319;
+                const latGuardada = parseFloat(b.getAttribute('data-lat'));
+                const lngGuardada = parseFloat(b.getAttribute('data-lng'));
                 
                 this.coordenadasSeleccionadas.lat = latGuardada;
                 this.coordenadasSeleccionadas.lng = lngGuardada;
 
-                // Movemos el visor de asistencia para comprobar visualmente la esquina guardada
                 if (this.mapaAuxiliar && this.marcadorMovible) {
                     const pos = new L.LatLng(latGuardada, lngGuardada);
                     this.marcadorMovible.setLatLng(pos);
@@ -318,12 +309,11 @@ export class ClientesController {
         this.btnSubmit.textContent = "Guardar Cliente en Base";
         if (this.btnCancel) this.btnCancel.style.display = "none";
         
-        // Reposicionamos el marcador al centroide base del mapa auxiliar
-        this.coordenadasSeleccionadas = { lat: -34.489584310640886, lng: -58.87831959094141 };
+        this.coordenadasSeleccionadas = { lat: -34.6037, lng: -58.3816 };
         if (this.mapaAuxiliar && this.marcadorMovible) {
             const posBase = new L.LatLng(this.coordenadasSeleccionadas.lat, this.coordenadasSeleccionadas.lng);
             this.marcadorMovible.setLatLng(posBase);
-            this.mapaAuxiliar.setView(posBase, 14);
+            this.mapaAuxiliar.setView(posBase, 12);
         }
     }
 

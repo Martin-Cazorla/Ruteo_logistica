@@ -25,7 +25,8 @@ export class ClientesController {
         // Infraestructura del Mapa de Asistencia Técnica Interno
         this.mapaAuxiliar = null;
         this.marcadorMovible = null;
-        // Coordenadas iniciales por defecto (Villa Astolfi)
+        
+        // Coordenadas base por defecto: Esquina Sanguinetti y Las Truchas (Villa Astolfi)
         this.coordenadasSeleccionadas = { lat: -34.489584310640886, lng: -58.87831959094141 }; 
     }
 
@@ -42,46 +43,55 @@ export class ClientesController {
         const mapDiv = document.getElementById('mapa-auxiliar-cliente');
         if (!mapDiv || typeof L === 'undefined') return;
 
-        this.mapaAuxiliar = L.map('mapa-auxiliar-cliente').setView([this.coordenadasSeleccionadas.lat, this.coordenadasSeleccionadas.lng], 14);
+        // Inicializamos el mapa centrado en tu zona real de distribución
+        this.mapaAuxiliar = L.map('mapa-auxiliar-cliente').setView([this.coordenadasSeleccionadas.lat, this.coordenadasSeleccionadas.lng], 15);
         
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
             maxZoom: 19,
             attribution: 'Martinez Routing'
         }).addTo(this.mapaAuxiliar);
 
+        // Creamos el pin arrastrable para correcciones milimétricas de precisión
         this.marcadorMovible = L.marker([this.coordenadasSeleccionadas.lat, this.coordenadasSeleccionadas.lng], {
             draggable: true
         }).addTo(this.mapaAuxiliar);
 
-        // Captura interactiva del punto exacto deseado por el operador
+        // Captura la posición exacta donde el operador suelta el pin
         this.marcadorMovible.on('dragend', (e) => {
             const posicionActual = e.target.getLatLng();
             this.coordenadasSeleccionadas.lat = posicionActual.lat;
             this.coordenadasSeleccionadas.lng = posicionActual.lng;
-            console.log("📍 Coordenadas ajustadas manualmente:", this.coordenadasSeleccionadas);
+            console.log("📍 Ubicación ajustada visualmente:", this.coordenadasSeleccionadas);
         });
     }
 
     setupDireccionBlurListener() {
         if (!this.direccionInput) return;
         
+        // Cuando el operador termina de escribir la dirección y cambia de campo, el mapa se desplaza solo
         this.direccionInput.addEventListener('blur', async () => {
             const direccionTexto = this.direccionInput.value.trim();
-            if (direccionTexto.length < 5) return;
+            if (direccionTexto.length < 4) return;
 
             this.btnSubmit.disabled = true;
-            this.btnSubmit.textContent = "Buscando aproximación en mapa...";
+            this.btnSubmit.textContent = "Buscando proximidades automáticamente...";
 
+            // Consultamos la API externa
             const resultadoGeo = await this._consultarApiGeocodingAsync(direccionTexto);
             
             this.coordenadasSeleccionadas.lat = resultadoGeo.lat;
             this.coordenadasSeleccionadas.lng = resultadoGeo.lng;
 
-            // CORREGIDO: Mapeo correcto de variables evitando crasheos fatales en tiempo de ejecución
+            // 🎯 SOLUCIÓN AL CRASHEO: Asignamos correctamente las variables extraídas de 'resultadoGeo'
             if (this.mapaAuxiliar && this.marcadorMovible) {
-                const nuevaPos = new L.LatLng(resultadoGeo.lat, resultadoGeo.lng);
-                this.marcadorMovible.setLatLng(nuevaPos);
-                this.mapaAuxiliar.setView(nuevaPos, 16);
+                const nuevaPosicion = new L.LatLng(resultadoGeo.lat, resultadoGeo.lng);
+                
+                // Movemos el pin y enfocamos el mapa de forma automatizada con zoom de alta densidad (16)
+                this.marcadorMovible.setLatLng(nuevaPosicion);
+                this.mapaAuxiliar.setView(nuevaPosicion, 16);
+                
+                // Forzamos actualización de renderizado en Leaflet para evitar áreas grises
+                setTimeout(() => { this.mapaAuxiliar.invalidateSize(); }, 100);
             }
 
             this.btnSubmit.disabled = false;
@@ -92,7 +102,7 @@ export class ClientesController {
     async _consultarApiGeocodingAsync(direccionTexto) {
         let queryLimpia = direccionTexto.trim();
         
-        // Atajo dinámico inteligente para autocompletar la traza de Villa Astolfi / Pilar si el operador la omite
+        // Blindaje zonal: si no se especifica Pilar o Astolfi, lo sumamos automáticamente para refinar el resultado
         if (!queryLimpia.toLowerCase().includes("pilar") && !queryLimpia.toLowerCase().includes("astolfi")) {
             queryLimpia += ", Villa Astolfi, Pilar";
         }
@@ -101,8 +111,10 @@ export class ClientesController {
         }
 
         try {
-            await new Promise(res => setTimeout(res, 300)); // Delay preventivo anti Rate-Limiting
-            const urlApi = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryLimpia)}&limit=1`;
+            // Delay de seguridad (350ms) para no ser bloqueados por políticas de ráfaga de Nominatim
+            await new Promise(res => setTimeout(res, 350));
+            
+            const urlApi = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryLimpia)}&countrycodes=ar&limit=1`;
             const respuesta = await fetch(urlApi, { headers: { 'User-Agent': 'Martinez-Routing-Application-v2.5' } });
             
             if (respuesta.ok) {
@@ -115,21 +127,23 @@ export class ClientesController {
                 }
             }
         } catch (err) {
-            console.warn("Fallo de comunicación en geocodificador dinámico.");
+            console.warn("API saturada o sin conexión. Usando fallback de proximidad.");
         }
 
-        return { lat: this.coordenadasSeleccionadas.lat, lng: this.coordenadasSeleccionadas.lng };
+        // Si la calle no se encuentra en absoluto, devolvemos tu centroide de control para que no se congele el mapa
+        return { lat: -34.489584, lng: -58.878319 };
     }
 
     setupFormSubmitListener() {
         this.formCliente.addEventListener('submit', async (e) => {
             e.preventDefault();
-            this.btnSubmit.disabled = true;
-            this.btnSubmit.textContent = "Guardando en registro central...";
-
+            
             const dniDocumento = this.dniInput.value.trim();
+            if (!dniDocumento) { alert("Por favor, ingrese un DNI válido."); return; }
 
-            // Mapeo unificado estricto de datos bajo el esquema consumido por DatabaseService
+            this.btnSubmit.disabled = true;
+            this.btnSubmit.textContent = "Sincronizando con base central NoSQL...";
+
             const payloadCliente = {
                 dni: dniDocumento,
                 nombre: this.nombreInput.value.trim().toUpperCase(),
@@ -139,20 +153,24 @@ export class ClientesController {
                     lat: this.coordenadasSeleccionadas.lat,
                     lng: this.coordenadasSeleccionadas.lng
                 },
+                latitud: this.coordenadasSeleccionadas.lat, 
+                longitud: this.coordenadasSeleccionadas.lng,
                 critico: this.checkCritico.checked,
-                isPremium: this.checkPremium.checked,
+                premium: this.checkPremium.checked,
+                isPremium: this.checkPremium.checked, 
                 isCritico: this.checkCritico.checked,
-                motivoCritico: this.checkCritico.checked ? "Reportado desde Fichero Maestro" : "",
+                motivoCritico: this.checkCritico.checked ? "Cuenta con historial de reclamos" : "",
                 historialReclamos: []
             };
 
             try {
+                // Persistencia limpia usando el servicio centralizado desacoplado
                 await DatabaseService.guardarCliente(payloadCliente);
-                alert(`¡Cliente #${dniDocumento} registrado con éxito y coordenadas fijadas!`);
+                alert(`¡Excelente! Cliente #${dniDocumento} guardado con coordenadas logísticas precisas.`);
                 this.limpiarFormulario();
             } catch (err) {
-                console.error("Fallo crítico en persistencia NoSQL: ", err);
-                alert("Error de red al intentar registrar la cuenta del cliente.");
+                console.error("Fallo atómico en setDoc:", err);
+                alert("Error de comunicación de red al intentar impactar Firebase.");
             } finally {
                 this.btnSubmit.disabled = false;
                 this.btnSubmit.textContent = "Guardar Cliente en Base";
@@ -173,18 +191,14 @@ export class ClientesController {
                     this.cacheClientesList.push({ id: docSnap.id, ...docSnap.data() });
                 });
                 this.renderClientes(this.cacheClientesList);
-            }, (error) => console.error("Fuga interceptada en canal de clientes:", error));
+            }, (err) => console.error("Error en sincronización en tiempo real:", err));
         });
     }
 
     renderClientes(lista) {
         if (!this.listadoContainer) return;
-
         if (lista.length === 0) {
-            this.listadoContainer.innerHTML = `
-                <div class="placeholder-vacio-jornada">
-                    No se encontraron registros de clientes en el Fichero Maestro.
-                </div>`;
+            this.listadoContainer.innerHTML = `<div class="placeholder-vacio-jornada">No se registraron cuentas de clientes en el sistema.</div>`;
             return;
         }
 
@@ -197,16 +211,15 @@ export class ClientesController {
             
             const latFichero = c.coordenadas?.lat || c.latitud || 0;
             const lngFichero = c.coordenadas?.lng || c.longitud || 0;
-
             const esPremium = !!c.isPremium || !!c.premium;
             const esCritico = !!c.isCritico || !!c.critico;
 
-            let claseVarianteTarjeta = "";
-            if (esCritico) claseVarianteTarjeta += " cliente-item-row--critico";
-            if (esPremium) claseVarianteTarjeta += " cliente-item-row--premium";
+            let claseVariante = "";
+            if (esCritico) claseVariante += " cliente-item-row--critico";
+            if (esPremium) claseVariante += " cliente-item-row--premium";
 
             return `
-                <div class="card-panel cliente-item-row${claseVarianteTarjeta}" data-id="${idSeguro}">
+                <div class="card-panel cliente-item-row${claseVariante}" data-id="${idSeguro}">
                     <div class="cliente-data-info">
                         <span class="cliente-name-title">${nomSeguro} ${esPremium ? '⭐' : ''} ${esCritico ? '⚠️' : ''}</span>
                         <span class="cliente-sub-text">DNI: <strong>${dniSeguro}</strong> | Tel: ${telSeguro}</span>
@@ -228,31 +241,29 @@ export class ClientesController {
     }
 
     vincularEventosInteractivosFichero() {
-        // ACCIÓN INTEGRADA: Dar de baja definitiva de la base de datos central
+        // ACCIÓN CONTROLADA: Eliminar cliente de forma permanente
         this.listadoContainer.querySelectorAll('.btn-delete-inline').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const id = e.target.getAttribute('data-id');
-                if (confirm(`¿Desea eliminar de forma permanente al cliente con DNI #${id} del Fichero Maestro?`)) {
-                    try {
-                        import("https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js").then(async (sdk) => {
-                            const { db } = await import('../services/firebaseConfig.js');
-                            await sdk.deleteDoc(sdk.doc(db, "clientes", id));
-                            alert("Cliente removido correctamente.");
-                        });
-                        this.limpiarFormulario();
-                    } catch (err) {
-                        console.error("Error al borrar cliente:", err);
-                    }
+                if (confirm(`⚠️ ¿Desea eliminar definitivamente al cliente con DNI #${id} de la base de datos maestro?`)) {
+                    import("https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js").then(async (sdk) => {
+                        const { db } = await import('../services/firebaseConfig.js');
+                        await sdk.deleteDoc(sdk.doc(db, "clientes", id));
+                        alert("Registro eliminado con éxito.");
+                    });
+                    this.limpiarFormulario();
                 }
             });
         });
 
-        // ACCIÓN INTEGRADA: Cargar datos en el formulario para edición inline
+        // ACCIÓN CONTROLADA: Editar ficha e hidratar mapa de proximidad
         this.listadoContainer.querySelectorAll('.btn-edit-inline').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const b = e.target;
                 this.hiddenIdInput.value = b.getAttribute('data-id');
                 this.dniInput.value = b.getAttribute('data-dni');
+                this.dniInput.disabled = true; // Protegemos la clave NoSQL primaria de modificaciones accidentales
+                
                 this.nombreInput.value = b.getAttribute('data-nombre');
                 this.telefonoInput.value = b.getAttribute('data-telefono');
                 this.direccionInput.value = b.getAttribute('data-direccion');
@@ -265,6 +276,7 @@ export class ClientesController {
                 this.coordenadasSeleccionadas.lat = latGuardada;
                 this.coordenadasSeleccionadas.lng = lngGuardada;
 
+                // Movemos el visor de asistencia para comprobar visualmente la esquina guardada
                 if (this.mapaAuxiliar && this.marcadorMovible) {
                     const pos = new L.LatLng(latGuardada, lngGuardada);
                     this.marcadorMovible.setLatLng(pos);
@@ -272,7 +284,6 @@ export class ClientesController {
                 }
 
                 this.btnSubmit.textContent = "Actualizar Datos Cliente";
-                this.dniInput.disabled = true; // El DNI no se edita por ser llave primaria NoSQL
                 if (this.btnCancel) this.btnCancel.style.display = "inline-block";
                 this.nombreInput.focus();
             });
@@ -307,7 +318,7 @@ export class ClientesController {
         this.btnSubmit.textContent = "Guardar Cliente en Base";
         if (this.btnCancel) this.btnCancel.style.display = "none";
         
-        // Reseteamos el mapa al centroide base operativo
+        // Reposicionamos el marcador al centroide base del mapa auxiliar
         this.coordenadasSeleccionadas = { lat: -34.489584310640886, lng: -58.87831959094141 };
         if (this.mapaAuxiliar && this.marcadorMovible) {
             const posBase = new L.LatLng(this.coordenadasSeleccionadas.lat, this.coordenadasSeleccionadas.lng);

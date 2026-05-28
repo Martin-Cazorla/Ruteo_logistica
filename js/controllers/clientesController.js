@@ -25,7 +25,8 @@ export class ClientesController {
         // Infraestructura del Mapa de Asistencia Técnica Interno
         this.mapaAuxiliar = null;
         this.marcadorMovible = null;
-        this.coordenadasSeleccionadas = { lat: -34.489584, lng: -58.878319 }; // Default Centroide Logístico
+        // Coordenadas iniciales por defecto (Villa Astolfi)
+        this.coordenadasSeleccionadas = { lat: -34.489584310640886, lng: -58.87831959094141 }; 
     }
 
     init() {
@@ -33,7 +34,7 @@ export class ClientesController {
         this.setupFormSubmitListener();
         this.setupSearchFilterListener();
         this.setupCancelButtonListener();
-        this.setupDireccionBlurListener(); // Escucha cuando el operador termina de escribir la dirección
+        this.setupDireccionBlurListener(); 
         this.escucharFicheroClientes();
     }
 
@@ -41,32 +42,29 @@ export class ClientesController {
         const mapDiv = document.getElementById('mapa-auxiliar-cliente');
         if (!mapDiv || typeof L === 'undefined') return;
 
-        // Inicializa el mapa enfocado en la zona operativa base
-        this.mapaAuxiliar = L.map('mapa-auxiliar-cliente').setView([this.coordenadasSeleccionadas.lat, this.coordenadasSeleccionadas.lng], 13);
+        this.mapaAuxiliar = L.map('mapa-auxiliar-cliente').setView([this.coordenadasSeleccionadas.lat, this.coordenadasSeleccionadas.lng], 14);
         
         L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
             maxZoom: 19,
             attribution: 'Martinez Routing'
         }).addTo(this.mapaAuxiliar);
 
-        // Crea un marcador dragable (arrastrable) para que el usuario corrija fallas de catastro
         this.marcadorMovible = L.marker([this.coordenadasSeleccionadas.lat, this.coordenadasSeleccionadas.lng], {
             draggable: true
         }).addTo(this.mapaAuxiliar);
 
-        // Evento crítico: Captura la posición exacta donde el operador suelta el pin con el mouse
+        // Captura interactiva del punto exacto deseado por el operador
         this.marcadorMovible.on('dragend', (e) => {
             const posicionActual = e.target.getLatLng();
             this.coordenadasSeleccionadas.lat = posicionActual.lat;
             this.coordenadasSeleccionadas.lng = posicionActual.lng;
-            console.log("📍 Coordenadas corregidas manualmente por el operador:", this.coordenadasSeleccionadas);
+            console.log("📍 Coordenadas ajustadas manualmente:", this.coordenadasSeleccionadas);
         });
     }
 
     setupDireccionBlurListener() {
         if (!this.direccionInput) return;
         
-        // Cuando el usuario sale del campo dirección, intentamos pre-ubicar el pin automáticamente
         this.direccionInput.addEventListener('blur', async () => {
             const direccionTexto = this.direccionInput.value.trim();
             if (direccionTexto.length < 5) return;
@@ -79,11 +77,11 @@ export class ClientesController {
             this.coordenadasSeleccionadas.lat = resultadoGeo.lat;
             this.coordenadasSeleccionadas.lng = resultadoGeo.lng;
 
-            // Movemos el mapa y el pin al lugar sugerido para que el usuario lo verifique
+            // CORREGIDO: Mapeo correcto de variables evitando crasheos fatales en tiempo de ejecución
             if (this.mapaAuxiliar && this.marcadorMovible) {
-                const nuevaPos = new L.LatLng(geoResult.lat, geoResult.lng);
+                const nuevaPos = new L.LatLng(resultadoGeo.lat, resultadoGeo.lng);
                 this.marcadorMovible.setLatLng(nuevaPos);
-                this.mapaAuxiliar.setView(nuevaPos, 15);
+                this.mapaAuxiliar.setView(nuevaPos, 16);
             }
 
             this.btnSubmit.disabled = false;
@@ -93,16 +91,20 @@ export class ClientesController {
 
     async _consultarApiGeocodingAsync(direccionTexto) {
         let queryLimpia = direccionTexto.trim();
+        
+        // Atajo dinámico inteligente para autocompletar la traza de Villa Astolfi / Pilar si el operador la omite
+        if (!queryLimpia.toLowerCase().includes("pilar") && !queryLimpia.toLowerCase().includes("astolfi")) {
+            queryLimpia += ", Villa Astolfi, Pilar";
+        }
         if (!queryLimpia.toLowerCase().includes("buenos aires")) {
             queryLimpia += ", Buenos Aires, Argentina";
         }
 
         try {
-            // Ponemos un retraso artificial preventivo para respetar el límite de 1 req/seg de Nominatim
-            await new Promise(res => setTimeout(res, 300));
-            
+            await new Promise(res => setTimeout(res, 300)); // Delay preventivo anti Rate-Limiting
             const urlApi = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryLimpia)}&limit=1`;
             const respuesta = await fetch(urlApi, { headers: { 'User-Agent': 'Martinez-Routing-Application-v2.5' } });
+            
             if (respuesta.ok) {
                 const dataJson = await respuesta.json();
                 if (dataJson && dataJson.length > 0) {
@@ -113,10 +115,9 @@ export class ClientesController {
                 }
             }
         } catch (err) {
-            console.warn("API externa no disponible.");
+            console.warn("Fallo de comunicación en geocodificador dinámico.");
         }
 
-        // Retorna las últimas coordenadas válidas registradas si la API falla
         return { lat: this.coordenadasSeleccionadas.lat, lng: this.coordenadasSeleccionadas.lng };
     }
 
@@ -124,11 +125,11 @@ export class ClientesController {
         this.formCliente.addEventListener('submit', async (e) => {
             e.preventDefault();
             this.btnSubmit.disabled = true;
+            this.btnSubmit.textContent = "Guardando en registro central...";
 
             const dniDocumento = this.dniInput.value.trim();
 
-            // 🌟 ESCUDO AUTOMÁTICO: Salvamos exactamente el punto donde quedó el Pin arrastrado.
-            // Si el operador movió el pin a la esquina real de Las Truchas, se guardan esos decimales perfectos.
+            // Mapeo unificado estricto de datos bajo el esquema consumido por DatabaseService
             const payloadCliente = {
                 dni: dniDocumento,
                 nombre: this.nombreInput.value.trim().toUpperCase(),
@@ -138,20 +139,20 @@ export class ClientesController {
                     lat: this.coordenadasSeleccionadas.lat,
                     lng: this.coordenadasSeleccionadas.lng
                 },
-                latitud: this.coordenadasSeleccionadas.lat, 
-                longitud: this.coordenadasSeleccionadas.lng,
                 critico: this.checkCritico.checked,
-                premium: this.checkPremium.checked,
-                isPremium: this.checkPremium.checked, 
-                isCritico: this.checkCritico.checked
+                isPremium: this.checkPremium.checked,
+                isCritico: this.checkCritico.checked,
+                motivoCritico: this.checkCritico.checked ? "Reportado desde Fichero Maestro" : "",
+                historialReclamos: []
             };
 
             try {
                 await DatabaseService.guardarCliente(payloadCliente);
-                alert(`¡Cliente #${dniDocumento} guardado con éxito logístico de coordenadas fijadas!`);
+                alert(`¡Cliente #${dniDocumento} registrado con éxito y coordenadas fijadas!`);
                 this.limpiarFormulario();
             } catch (err) {
-                console.error("Fallo al persistir: ", err);
+                console.error("Fallo crítico en persistencia NoSQL: ", err);
+                alert("Error de red al intentar registrar la cuenta del cliente.");
             } finally {
                 this.btnSubmit.disabled = false;
                 this.btnSubmit.textContent = "Guardar Cliente en Base";
@@ -161,6 +162,7 @@ export class ClientesController {
 
     escucharFicheroClientes() {
         if (!this.listadoContainer) return;
+        
         import("https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js").then(async (sdk) => {
             const { db } = await import('../services/firebaseConfig.js');
             const q = sdk.query(sdk.collection(db, "clientes"));
@@ -171,11 +173,21 @@ export class ClientesController {
                     this.cacheClientesList.push({ id: docSnap.id, ...docSnap.data() });
                 });
                 this.renderClientes(this.cacheClientesList);
-            });
+            }, (error) => console.error("Fuga interceptada en canal de clientes:", error));
         });
     }
 
     renderClientes(lista) {
+        if (!this.listadoContainer) return;
+
+        if (lista.length === 0) {
+            this.listadoContainer.innerHTML = `
+                <div class="placeholder-vacio-jornada">
+                    No se encontraron registros de clientes en el Fichero Maestro.
+                </div>`;
+            return;
+        }
+
         this.listadoContainer.innerHTML = lista.map(c => {
             const idSeguro = Sanitizer.escapeHTML(c.id);
             const dniSeguro = Sanitizer.escapeHTML(c.dni || c.id);
@@ -186,11 +198,18 @@ export class ClientesController {
             const latFichero = c.coordenadas?.lat || c.latitud || 0;
             const lngFichero = c.coordenadas?.lng || c.longitud || 0;
 
+            const esPremium = !!c.isPremium || !!c.premium;
+            const esCritico = !!c.isCritico || !!c.critico;
+
+            let claseVarianteTarjeta = "";
+            if (esCritico) claseVarianteTarjeta += " cliente-item-row--critico";
+            if (esPremium) claseVarianteTarjeta += " cliente-item-row--premium";
+
             return `
-                <div class="card-panel cliente-item-row" data-id="${idSeguro}">
+                <div class="card-panel cliente-item-row${claseVarianteTarjeta}" data-id="${idSeguro}">
                     <div class="cliente-data-info">
-                        <span class="cliente-name-title">${nomSeguro}</span>
-                        <span class="cliente-sub-text">DNI: <strong>${dniSeguro}</strong></span>
+                        <span class="cliente-name-title">${nomSeguro} ${esPremium ? '⭐' : ''} ${esCritico ? '⚠️' : ''}</span>
+                        <span class="cliente-sub-text">DNI: <strong>${dniSeguro}</strong> | Tel: ${telSeguro}</span>
                         <span class="cliente-sub-text">Dir: <em>${dirSeguro}</em></span>
                     </div>
                     <div class="cliente-actions-trigger">
@@ -198,7 +217,8 @@ export class ClientesController {
                                 data-id="${idSeguro}" data-dni="${dniSeguro}" data-nombre="${nomSeguro}" 
                                 data-telefono="${telSeguro}" data-direccion="${dirSeguro}"
                                 data-lat="${latFichero}" data-lng="${lngFichero}"
-                                data-premium="${!!c.isPremium}" data-critico="${!!c.isCritico}">Editar</button>
+                                data-premium="${esPremium}" data-critico="${esCritico}">Editar</button>
+                        <button class="btn-delete-inline" data-id="${idSeguro}">Remover</button>
                     </div>
                 </div>
             `;
@@ -208,6 +228,26 @@ export class ClientesController {
     }
 
     vincularEventosInteractivosFichero() {
+        // ACCIÓN INTEGRADA: Dar de baja definitiva de la base de datos central
+        this.listadoContainer.querySelectorAll('.btn-delete-inline').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const id = e.target.getAttribute('data-id');
+                if (confirm(`¿Desea eliminar de forma permanente al cliente con DNI #${id} del Fichero Maestro?`)) {
+                    try {
+                        import("https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js").then(async (sdk) => {
+                            const { db } = await import('../services/firebaseConfig.js');
+                            await sdk.deleteDoc(sdk.doc(db, "clientes", id));
+                            alert("Cliente removido correctamente.");
+                        });
+                        this.limpiarFormulario();
+                    } catch (err) {
+                        console.error("Error al borrar cliente:", err);
+                    }
+                }
+            });
+        });
+
+        // ACCIÓN INTEGRADA: Cargar datos en el formulario para edición inline
         this.listadoContainer.querySelectorAll('.btn-edit-inline').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const b = e.target;
@@ -219,9 +259,8 @@ export class ClientesController {
                 this.checkPremium.checked = b.getAttribute('data-premium') === 'true';
                 this.checkCritico.checked = b.getAttribute('data-critico') === 'true';
 
-                // Al editar, recuperamos la coordenada guardada y reposicionamos el pin de asistencia
-                const latGuardada = parseFloat(b.getAttribute('data-lat'));
-                const lngGuardada = parseFloat(b.getAttribute('data-lng'));
+                const latGuardada = parseFloat(b.getAttribute('data-lat')) || -34.489584;
+                const lngGuardada = parseFloat(b.getAttribute('data-lng')) || -58.878319;
                 
                 this.coordenadasSeleccionadas.lat = latGuardada;
                 this.coordenadasSeleccionadas.lng = lngGuardada;
@@ -229,10 +268,11 @@ export class ClientesController {
                 if (this.mapaAuxiliar && this.marcadorMovible) {
                     const pos = new L.LatLng(latGuardada, lngGuardada);
                     this.marcadorMovible.setLatLng(pos);
-                    this.mapaAuxiliar.setView(pos, 15);
+                    this.mapaAuxiliar.setView(pos, 16);
                 }
 
                 this.btnSubmit.textContent = "Actualizar Datos Cliente";
+                this.dniInput.disabled = true; // El DNI no se edita por ser llave primaria NoSQL
                 if (this.btnCancel) this.btnCancel.style.display = "inline-block";
                 this.nombreInput.focus();
             });
@@ -244,8 +284,11 @@ export class ClientesController {
         this.searchBox.addEventListener('input', (e) => {
             const term = e.target.value.trim().toLowerCase();
             if (!term) { this.renderClientes(this.cacheClientesList); return; }
+            
             const fil = this.cacheClientesList.filter(c => 
-                (c.dni || '').toLowerCase().includes(term) || (c.nombre || '').toLowerCase().includes(term)
+                (c.dni || '').toLowerCase().includes(term) || 
+                (c.nombre || '').toLowerCase().includes(term) ||
+                (c.direccion || '').toLowerCase().includes(term)
             );
             this.renderClientes(fil);
         });
@@ -258,10 +301,19 @@ export class ClientesController {
     limpiarFormulario() {
         this.formCliente.reset();
         this.hiddenIdInput.value = "";
+        this.dniInput.disabled = false;
         this.checkPremium.checked = false;
         this.checkCritico.checked = false;
         this.btnSubmit.textContent = "Guardar Cliente en Base";
         if (this.btnCancel) this.btnCancel.style.display = "none";
+        
+        // Reseteamos el mapa al centroide base operativo
+        this.coordenadasSeleccionadas = { lat: -34.489584310640886, lng: -58.87831959094141 };
+        if (this.mapaAuxiliar && this.marcadorMovible) {
+            const posBase = new L.LatLng(this.coordenadasSeleccionadas.lat, this.coordenadasSeleccionadas.lng);
+            this.marcadorMovible.setLatLng(posBase);
+            this.mapaAuxiliar.setView(posBase, 14);
+        }
     }
 
     unmount() {

@@ -1586,12 +1586,21 @@ ol {
   height: 16px;
   cursor: pointer;
 }
-.clientes-manager__checkbox-label input[type=checkbox]:id(c-is-premium) {
+.clientes-manager__checkbox-label input[type=checkbox][id=c-is-premium] {
   accent-color: #eab308;
 }
-.clientes-manager__checkbox-label input[type=checkbox]:id(c-is-critico) {
+.clientes-manager__checkbox-label input[type=checkbox][id=c-is-critico] {
   accent-color: #ef4444;
 }
 .clientes-manager__checkbox-label:hover {
   color: #ffffff;
+}
+.clientes-manager__map-wrapper {
+  width: 100%;
+  height: 250px;
+  border-radius: 8px;
+  border: 1px solid #334155;
+  margin-top: 0.5rem;
+  background-color: #0f172a;
+  z-index: 5;
 }/*# sourceMappingURL=main.css.map */

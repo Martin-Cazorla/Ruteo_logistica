@@ -1549,4 +1549,49 @@ ol {
   padding: 1.5rem;
   font-size: 0.9rem;
   font-weight: 500;
+}
+
+.clientes-manager__segmentation-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  background-color: #1e293b;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #334155;
+  margin-top: 0.5rem;
+}
+.clientes-manager__segmentation-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.75px;
+}
+.clientes-manager__checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+  font-size: 0.88rem;
+  color: #f8fafc;
+  font-weight: 600;
+  -webkit-user-select: none;
+     -moz-user-select: none;
+          user-select: none;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.clientes-manager__checkbox-label input[type=checkbox] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+.clientes-manager__checkbox-label input[type=checkbox]:id(c-is-premium) {
+  accent-color: #eab308;
+}
+.clientes-manager__checkbox-label input[type=checkbox]:id(c-is-critico) {
+  accent-color: #ef4444;
+}
+.clientes-manager__checkbox-label:hover {
+  color: #ffffff;
 }/*# sourceMappingURL=main.css.map */

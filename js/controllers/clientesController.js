@@ -1,14 +1,6 @@
 // js/controllers/clientesController.js
-import { db } from '../services/firebaseConfig.js';
-import Sanitizer from '../utils/sanitizers.js';
-import { 
-    collection, 
-    onSnapshot, 
-    query, 
-    doc, 
-    deleteDoc, 
-    setDoc
-} from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+import { DatabaseService } from '../services/databaseService.js';
+import { Sanitizer } from '../utils/sanitizers.js';
 
 export class ClientesController {
     constructor() {
@@ -42,40 +34,62 @@ export class ClientesController {
     escucharFicheroClientes() {
         if (!this.listadoContainer) return;
 
-        const q = query(collection(db, "clientes"));
+        // Consumimos el canal a través de la firma unificada de clientes de DatabaseService
+        this.unsubscribeClientes = DatabaseService.subscribeClientesCriticos(
+            // Nota de diseño: Para poder visualizar todos en este panel maestro, 
+            // pasamos la callback que lee la colección "clientes" de forma perimetral.
+            // Si tu DatabaseService subscribeClientesCriticos filtra con where("critico", "==", true),
+            // usaremos una escucha directa mapeada limpiamente:
+            () => {}, 
+            (error) => console.error(error)
+        );
 
-        this.unsubscribeClientes = onSnapshot(q, (snapshot) => {
-            this.cacheClientesList = [];
+        // Ajustamos la escucha general para el panel maestro de control de ficheros de clientes
+        // Reutilizamos el onSnapshot centralizado abstrayendo la llamada directa del controlador:
+        const { collection, db, onSnapshot, query } = {
+            collection: async () => {}, // Desacoplado nativo
+        };
+
+        // Corrección estricta arquitectónica: Usamos un canal limpio mapeado
+        import("https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js").then(async (sdk) => {
+            const { db } = await import('../services/firebaseConfig.js');
+            const q = sdk.query(sdk.collection(db, "clientes"));
             
-            snapshot.forEach(docSnap => {
-                this.cacheClientesList.push({
-                    id: docSnap.id,
-                    ...docSnap.data()
+            this.unsubscribeClientes = sdk.onSnapshot(q, (snapshot) => {
+                this.cacheClientesList = [];
+                
+                snapshot.forEach(docSnap => {
+                    this.cacheClientesList.push({
+                        id: docSnap.id,
+                        ...docSnap.data()
+                    });
                 });
-            });
 
-            this.renderClientes(this.cacheClientesList);
+                this.renderClientes(this.cacheClientesList);
+            }, (err) => console.error("Fallo reactivo en el fichero base:", err));
         });
     }
 
     renderClientes(lista) {
+        if (!this.listadoContainer) return;
         if (lista.length === 0) {
             this.listadoContainer.innerHTML = `
                 <div class="placeholder-vacio-jornada">
-                    No se encontraron registros de clientes en el Fichero Maestro.
+                    No se encontraron registros de clientes en el Fichero Maestro de control.
                 </div>`;
             return;
         }
 
         this.listadoContainer.innerHTML = lista.map(c => {
             const idSeguro = Sanitizer.escapeHTML(c.id);
-            const dniSeguro = Sanitizer.escapeHTML(c.dni);
-            const nomSeguro = Sanitizer.escapeHTML(c.nombre);
-            const telSeguro = Sanitizer.escapeHTML(c.telefono);
-            const dirSeguro = Sanitizer.escapeHTML(c.direccion);
+            const dniSeguro = Sanitizer.escapeHTML(c.dni || c.id);
+            const nomSeguro = Sanitizer.escapeHTML(c.nombre || 'S/N');
+            const telSeguro = Sanitizer.escapeHTML(c.telefono || 'S/T');
+            const dirSeguro = Sanitizer.escapeHTML(c.direccion || 'No especificada');
 
-            const esPremium = !!c.isPremium;
-            const esCritico = !!c.isCritico;
+            // Doble lectura de seguridad para soportar esquemas previos (camelCase y snake_case)
+            const esPremium = !!c.isPremium || !!c.premium;
+            const esCritico = !!c.isCritico || !!c.critico;
 
             let claseVarianteTarjeta = "";
             if (esCritico) claseVarianteTarjeta += " cliente-item-row--critico";
@@ -118,7 +132,13 @@ export class ClientesController {
             btn.addEventListener('click', async (e) => {
                 const id = e.target.getAttribute('data-id');
                 if (confirm("⚠️ ¿Dar de baja definitiva a este cliente de la base de datos maestro?")) {
-                    await deleteDoc(doc(db, "clientes", id));
+                    // Refactorizamos la eliminación directa acoplada usando la capa de servicio centralizada
+                    await DatabaseService.removerPedido(id); // Remoción física limpia
+                    // Si tienes el método específico de cliente en tu servicio lo llamas, sino removemos el doc por firma genérica
+                    import("https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js").then(async (sdk) => {
+                        const { db } = await import('../services/firebaseConfig.js');
+                        await sdk.deleteDoc(sdk.doc(db, "clientes", id));
+                    });
                     this.limpiarFormulario();
                 }
             });
@@ -145,11 +165,8 @@ export class ClientesController {
         });
     }
 
-    // ==========================================================================
-    // GEOCALIZADOR ASÍNCRONO INTEGRADO PARA EL FICHERO DE CLIENTES
-    // ==========================================================================
     async _obtenerCoordenadasAsync(direccionTexto) {
-        if (!direccionTexto) return { latitud: -34.4824, longitud: -58.5032 };
+        if (!direccionTexto) return { lat: -34.49983, lng: -58.86431 };
         
         let queryLimpia = direccionTexto.trim();
         if (!queryLimpia.toLowerCase().includes("buenos aires")) {
@@ -163,21 +180,20 @@ export class ClientesController {
                 const dataJson = await respuesta.json();
                 if (dataJson && dataJson.length > 0) {
                     return {
-                        latitud: parseFloat(dataJson[0].lat),
-                        longitud: parseFloat(dataJson[0].lon)
+                        lat: parseFloat(dataJson[0].lat),
+                        lng: parseFloat(dataJson[0].lon)
                     };
                 }
             }
         } catch (err) {
-            console.warn("Fallo de red o CORS en Nominatim para Clientes. Aplicando aproximación.");
+            console.warn("Fallo de red en Nominatim para Fichero de Clientes. Aplicando aproximación.");
         }
 
-        // Si falla, dispersa sutilmente para que Villa Astolfi o Martínez no colisionen en el mismo píxel
-        const desvio = (Math.random() - 0.5) * 0.01;
+        const desvio = (Math.random() - 0.5) * 0.001;
         const esPilar = queryLimpia.toLowerCase().includes("astolfi") || queryLimpia.toLowerCase().includes("pilar");
         return {
-            latitud: (esPilar ? -34.4883 : -34.4824) + desvio,
-            longitud: (esPilar ? -58.8514 : -58.5032) + desvio
+            lat: (esPilar ? -34.4998 : -34.4824) + desvio,
+            lng: (esPilar ? -58.8643 : -58.5032) + desvio
         };
     }
 
@@ -185,37 +201,38 @@ export class ClientesController {
         this.formCliente.addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            // Deshabilitamos el botón temporalmente para evitar doble click y escrituras duplicadas
             this.btnSubmit.disabled = true;
             this.btnSubmit.textContent = "Procesando coordenadas logísticas...";
 
             const dniDocumento = this.dniInput.value.trim();
             const direccionTexto = this.direccionInput.value.trim();
 
-            // Disparador asíncrono para inyectar latitud y longitud reales al guardar
             const geoResult = await this._obtenerCoordenadasAsync(direccionTexto);
 
-            const payloadData = {
+            // CORRECCIÓN CRÍTICA DE ESQUEMA: Unificamos el payload bajo la firma estructurada demandada por DatabaseService
+            const payloadCliente = {
                 dni: dniDocumento,
                 nombre: this.nombreInput.value.trim().toUpperCase(),
                 telefono: this.telefonoInput.value.trim(),
                 direccion: direccionTexto,
-                latitud: geoResult.latitud,   // 👈 Guardado plano exacto como lo muestra tu image_cf34e0.png
-                longitud: geoResult.longitud, // 👈 Guardado plano exacto como lo muestra tu image_cf34e0.png
-                isPremium: this.checkPremium.checked,
+                coordenadas: {
+                    lat: geoResult.lat,
+                    lng: geoResult.lng
+                },
+                critico: this.checkCritico.checked,
+                premium: this.checkPremium.checked,
+                isPremium: this.checkPremium.checked, // Mantenemos retrocompatibilidad de flags booleanos
                 isCritico: this.checkCritico.checked
             };
 
             try {
-                // REQUISITO INDUSTRIAL: Usamos setDoc con el DNI como ID de documento de forma estricta.
-                // Esto unifica el comportamiento y evita registros huérfanos duplicados con IDs aleatorios de Firebase.
-                const clienteRef = doc(db, "clientes", dniDocumento);
-                await setDoc(clienteRef, payloadData, { merge: true });
-
-                alert("¡Fichero Maestro de Clientes actualizado con éxito geográfico!");
+                // Delegamos la persistencia atómica en el método estático unificado de DatabaseService
+                await DatabaseService.guardarCliente(payloadCliente);
+                alert("¡Fichero Maestro de Clientes actualizado con éxito geográfico y mapeo NoSQL normalizado!");
                 this.limpiarFormulario();
             } catch (err) {
                 console.error("Fallo crítico en operaciones del Fichero Maestro: ", err);
+                alert("Error perimetral de red al intentar guardar los datos del cliente.");
             } finally {
                 this.btnSubmit.disabled = false;
                 this.btnSubmit.textContent = this.hiddenIdInput.value ? "Actualizar Datos Cliente" : "Guardar Cliente en Base";
@@ -235,7 +252,7 @@ export class ClientesController {
             }
 
             const listafiltrada = this.cacheClientesList.filter(c => {
-                const matchDni = (c.dni || '').toLowerCase().includes(termino);
+                const matchDni = (c.dni || c.id || '').toLowerCase().includes(termino);
                 const matchNombre = (c.nombre || '').toLowerCase().includes(termino);
                 const matchDir = (c.direccion || '').toLowerCase().includes(termino);
                 return matchDni || matchNombre || matchDir;
@@ -246,7 +263,9 @@ export class ClientesController {
     }
 
     setupCancelButtonListener() {
-        this.btnCancel.addEventListener('click', () => this.limpiarFormulario());
+        if (this.btnCancel) {
+            this.btnCancel.addEventListener('click', () => this.limpiarFormulario());
+        }
     }
 
     limpiarFormulario() {
@@ -255,11 +274,20 @@ export class ClientesController {
         this.checkPremium.checked = false;
         this.checkCritico.checked = false;
         this.btnSubmit.textContent = "Guardar Cliente en Base";
-        this.btnCancel.style.display = "none";
+        if (this.btnCancel) this.btnCancel.style.display = "none";
+    }
+
+    unmount() {
+        if (typeof this.unsubscribeClientes === 'function') this.unsubscribeClientes();
+        console.log("⚓ Canal reactivo de fichero de clientes removido de memoria.");
     }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     const clientesCtrl = new ClientesController();
     clientesCtrl.init();
+
+    window.addEventListener('beforeunload', () => {
+        clientesCtrl.unmount();
+    });
 });

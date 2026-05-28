@@ -10,14 +10,14 @@
 
     <header class="app-header">
         <nav class="app-navbar" aria-label="Navegación del sistema">
-            <div class="brand-title">Martinez Routing Clientes</div>
-            <div class="dashboard-counters">
-                <a href="../index.html" class="nav-link">Inicio</a>
-                <a href="dashboard.html" class="nav-link">Panel de Carga</a>
-                <a href="shipping.html" class="nav-link">Consola Mapa</a>
-                <a href="transporte.html" class="nav-link">Flota</a>
-                <a href="clientes.html" class="nav-link nav-link--active">Clientes</a>
-                <a href="administracion.html" class="nav-link">Seguridad</a>
+            <div class="app-navbar__brand">Martinez Routing Clientes</div>
+            <div class="app-navbar__menu">
+                <a href="../index.html" class="app-navbar__link">Inicio</a>
+                <a href="dashboard.html" class="app-navbar__link">Panel de Carga</a>
+                <a href="shipping.html" class="app-navbar__link">Consola Mapa</a>
+                <a href="transporte.html" class="app-navbar__link">Flota</a>
+                <a href="clientes.html" class="app-navbar__link app-navbar__link--active" aria-current="page">Clientes</a>
+                <a href="administracion.html" class="app-navbar__link">Seguridad</a>
             </div>
         </nav>
     </header>
@@ -26,66 +26,68 @@
         <div class="grid-two-columns">
             
             <section class="card-panel" aria-labelledby="form-clientes-title">
-                <h3 id="form-clientes-title" class="section-title">Registro Maestro de Clientes</h3>
+                <h3 id="form-clientes-title" class="card-panel__title">Registro Maestro de Clientes</h3>
+                <p class="instruction-text">Fichero centralizado de cuentas de entrega. La geocodificación se procesa en segundo plano.</p>
                 
                 <form id="form-cliente-operativo" class="form-vertical">
                     <input type="hidden" id="cliente-id-hidden">
 
                     <div class="form-group">
-                        <label for="c-dni">Documento Nacional de Identidad (DNI):</label>
-                        <input type="text" id="c-dni" class="select-field" placeholder="Ej: 35123456" required autocomplete="off">
+                        <label for="c-dni" class="form-group__label">Documento Nacional de Identidad (DNI):</label>
+                        <input type="text" id="c-dni" class="form-group__input" placeholder="Ej: 35123456" required autocomplete="off">
                     </div>
 
                     <div class="form-group">
-                        <label for="c-nombre">Nombre Completo o Razón Social:</label>
-                        <input type="text" id="c-nombre" class="select-field" placeholder="Ej: Juan Pérez" required autocomplete="off">
+                        <label for="c-nombre" class="form-group__label">Nombre Completo o Razón Social:</label>
+                        <input type="text" id="c-nombre" class="form-group__input" placeholder="Ej: Juan Pérez" required autocomplete="off">
                     </div>
 
                     <div class="form-group">
-                        <label for="c-telefono">Teléfono de Contacto (Alertas SMS):</label>
-                        <input type="tel" id="c-telefono" class="select-field" placeholder="Ej: 1123456789" required autocomplete="off">
+                        <label for="c-telefono" class="form-group__label">Teléfono de Contacto (Alertas SMS):</label>
+                        <input type="tel" id="c-telefono" class="form-group__input" placeholder="Ej: 1123456789" required autocomplete="off">
                     </div>
 
                     <div class="form-group">
-                        <label for="c-direccion">Dirección Estructurada de Entrega:</label>
-                        <input type="text" id="c-direccion" class="select-field" placeholder="Calle, Altura, Localidad (Martinez)" required autocomplete="off">
+                        <label for="c-direccion" class="form-group__label">Dirección Estructurada de Entrega:</label>
+                        <input type="text" id="c-direccion" class="form-group__input" placeholder="Calle, Altura, Localidad (Martinez)" required autocomplete="off">
                     </div>
 
-                    <div class="form-group group-segmentacion-tactica" style="display: flex; flex-direction: column; gap: 0.65rem; background-color: #1e293b; padding: 0.75rem; border-radius: 6px; border: 1px solid #334155; margin-top: 0.25rem;">
-                        <span style="font-size: 0.8rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Segmentación de Cuenta:</span>
+                    <div class="form-group clientes-manager__segmentation-box">
+                        <span class="clientes-manager__segmentation-title">Segmentación de Cuenta:</span>
                         
-                        <label class="checkbox-row" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.85rem; color: #f8fafc; font-weight: 600;">
-                            <input type="checkbox" id="c-is-premium" style="width: 16px; height: 16px; accent-color: #eab308;">
+                        <label class="clientes-manager__checkbox-label">
+                            <input type="checkbox" id="c-is-premium">
                             <span>⭐ Cuenta Cliente Premium (Alta Prioridad / Corporativo)</span>
                         </label>
 
-                        <label class="checkbox-row" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.85rem; color: #f8fafc; font-weight: 600;">
-                            <input type="checkbox" id="c-is-critico" style="width: 16px; height: 16px; accent-color: #ef4444;">
+                        <label class="clientes-manager__checkbox-label">
+                            <input type="checkbox" id="c-is-critico">
                             <span>⚠️ Cuenta Cliente Crítico (Historial de Reclamos / Faltantes)</span>
                         </label>
                     </div>
 
-                    <div class="action-buttons-group" style="display: flex; gap: 0.75rem; margin-top: 0.75rem;">
-                        <button type="submit" id="btn-guardar-cliente" class="btn-primary w-100">Guardar Cliente en Base</button>
-                        <button type="button" id="btn-cancelar-edicion" class="btn-secondary" style="display: none;">Cancelar</button>
+                    <div class="action-buttons-group">
+                        <button type="submit" id="btn-guardar-cliente" class="btn-primary">Guardar Cliente en Base</button>
+                        <button type="button" id="btn-cancelar-edicion" class="btn-primary" style="display: none; background-color: #475569;">Cancelar</button>
                     </div>
                 </form>
             </section>
 
             <section class="card-panel" aria-labelledby="lista-clientes-title">
-                <h3 id="lista-clientes-title" class="section-title">Fichero Base de Clientes</h3>
+                <h3 id="lista-clientes-title" class="card-panel__title">Fichero Base de Clientes</h3>
                 
-                <div class="search-box" style="margin-bottom: 0.5rem;">
-                    <input type="search" id="search-cliente" class="select-field" placeholder="🔍 Filtrar por DNI, Nombre o Dirección en tiempo real...">
+                <div class="search-box">
+                    <input type="search" id="search-cliente" class="form-group__input" placeholder="🔍 Filtrar por DNI, Nombre o Dirección en tiempo real..." aria-label="Filtrar fichero de clientes">
                 </div>
 
-                <div id="listado-master-clientes" class="list-scroll-box" role="region" aria-live="polite" style="max-height: calc(100vh - 300px); overflow-y: auto; display: flex; flex-direction: column; gap: 0.75rem;">
-                    </div>
+                <div id="listado-master-clientes" class="list-scroll-box" role="region" aria-live="polite">
+                     </div>
             </section>
 
         </div>
     </main>
 
+    <script type="module" src="../js/app.js"></script>
     <script type="module" src="../js/controllers/clientesController.js"></script>
 </body>
 </html>

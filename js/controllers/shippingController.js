@@ -1,26 +1,16 @@
 // js/controllers/shippingController.js
-import store from '../state/store.js'; 
+import { store } from '../state/store.js'; 
 import { MapModule } from '../modules/mapModule.js'; 
-import { db } from '../services/firebaseConfig.js'; 
-import Sanitizer from '../utils/sanitizers.js'; 
-import { 
-    collection, 
-    onSnapshot, 
-    query, 
-    where, 
-    getDocs, 
-    doc, 
-    writeBatch 
-} from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+import { DatabaseService } from '../services/databaseService.js'; 
+import { Sanitizer } from '../utils/sanitizers.js'; 
 
-export class ShippingController {
+class ShippingController {
     constructor() {
         this.mapModule = null;
         this.filterSelect = null;
         this.sidebarContainer = null;
         this.mapDateFilter = document.getElementById('map-date-filter');
 
-        // CORREGIDO: ID alineado con el archivo shipping.html ("modal-asignacion-flota")
         this.dialogAsignacion = document.getElementById('modal-asignacion-flota');
         this.loteCantidadDisplay = document.getElementById('modal-lote-cantidad');
         this.selectTransporteLote = document.getElementById('select-transporte-lote');
@@ -30,6 +20,7 @@ export class ShippingController {
 
         this.loteIdsSeleccionados = [];
         this.unsubscribePedidos = null; 
+        this.unsubscribeStore = null;
     }
 
     init() {
@@ -47,11 +38,13 @@ export class ShippingController {
                     this.handleMassAssignment(selectedIds);
                 });
             } catch (mapError) {
-                console.error("Fallo crítico Leaflet:", mapError);
+                console.error("Fallo crítico Leaflet en inicialización de capas: ", mapError);
             }
         }
 
-        store.subscribe((state) => this.render(state));
+        // Suscripción de ciclo limpio al Store unificado
+        this.unsubscribeStore = store.subscribe((state) => this.render(state));
+        
         this.setupEventListeners();
         this.setupDialogListeners();
         this.sincronizarMapaPorFecha(); 
@@ -60,88 +53,78 @@ export class ShippingController {
     sincronizarMapaPorFecha() {
         if (!this.mapDateFilter) return;
         const fechaSeleccionada = this.mapDateFilter.value;
-        if (this.unsubscribePedidos) this.unsubscribePedidos();
+        
+        if (typeof this.unsubscribePedidos === 'function') this.unsubscribePedidos();
         this.conectarPedidosFirestore(fechaSeleccionada);
     }
 
     conectarPedidosFirestore(fechaTarget) {
-        const q = query(collection(db, "pedidos"), where("fecha_creacion", "==", fechaTarget));
+        // Consumimos el canal reactivo unificado purgado de llamadas crudas al SDK
+        this.unsubscribePedidos = DatabaseService.subscribePedidosPorFecha(
+            fechaTarget,
+            async (snapshot) => {
+                const pedidosData = [];
+                const mapClientesCriticos = new Map();
+                const mapClientesPremium = new Map();
 
-        this.unsubscribePedidos = onSnapshot(q, async (snapshot) => {
-            const pedidosData = [];
-
-            const clientesSnap = await getDocs(collection(db, "clientes"));
-            const mapClientesCriticos = new Map();
-            const mapClientesPremium = new Map();
-
-            clientesSnap.forEach(cDoc => {
-                const cData = cDoc.data();
-                if (cData.dni) {
-                    mapClientesCriticos.set(String(cData.dni).trim(), !!cData.isCritico);
-                    mapClientesPremium.set(String(cData.dni).trim(), !!cData.isPremium);
-                }
-            });
-
-            snapshot.forEach((docSnap) => {
-                const data = docSnap.data();
-                const DniLimpio = data.dni_cliente ? String(data.dni_cliente).trim() : '';
-
-                const esClienteCriticoBase = mapClientesCriticos.get(DniLimpio) || false;
-                const esClientePremiumBase = mapClientesPremium.get(DniLimpio) || false;
-                const determinarCriticidad = data.esCritico || esClienteCriticoBase;
-
-                // NORMALIZACIÓN GEOESPACIAL DE LECTURA FIRESTORE
-                let latExtraida = null;
-                let lngExtraida = null;
-
-                if (data.coordenada) {
-                    latExtraida = data.coordenada.lat;
-                    lngExtraida = data.coordenada.lng;
-                } else if (data.coordenadas) {
-                    latExtraida = data.coordenadas.lat;
-                    lngExtraida = data.coordenadas.lng;
-                } else if (typeof data.latitud !== 'undefined' && typeof data.longitud !== 'undefined') {
-                    latExtraida = data.latitud;
-                    lngExtraida = data.longitud;
+                try {
+                    // Resolvemos los metadatos cruzados de clientes en una única llamada secuencial controlada
+                    const clientesSnap = await DatabaseService.buscarClientePorDni("");
+                    // Nota de campo: El listado maestro mapea llaves en el diccionario local de memoria
+                    clientesSnap.forEach(cDoc => {
+                        const cData = cDoc.data();
+                        if (cData.dni) {
+                            mapClientesCriticos.set(String(cData.dni).trim(), !!cData.critico || !!cData.isCritico);
+                            mapClientesPremium.set(String(cData.dni).trim(), !!cData.premium || !!cData.isPremium);
+                        }
+                    });
+                } catch (errClientes) {
+                    console.warn("Fichero maestro de clientes inaccesible. Computando criticidades locales de orden.");
                 }
 
-                // UNIFICACIÓN OPERATIVA DE PROPIEDADES (Doble lectura de seguridad para guiones bajos y camelCase)
-                pedidosData.push({
-                    id: docSnap.id,
-                    fecha: data.fecha_creacion,
-                    franjaHoraria: data.franjaHoraria || '10:00-14:00',
-                    importe: data.importe || 0,
-                    esCritico: determinarCriticidad,
-                    isPremium: esClientePremiumBase, 
-                    motivoCritico: data.motivoCritico || (esClienteCriticoBase ? 'Cliente clasificado como CRÍTICO en Fichero Base' : ''),
-                    numeroPedido: data.numero_pedido || data.numeroPedido || 'S/N', // 👈 Mapeado unificado para UI y MapModule
-                    internoAsignado: data.interno_asignado || null,
-                    direccion: data.direccion_entrega || data.direccion || '',
-                    coordenadas: {
-                        lat: parseFloat(latExtraida),
-                        lng: parseFloat(lngExtraida)
-                    }
+                snapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    const dniLimpio = data.clienteDni ? String(data.clienteDni).trim() : '';
+
+                    const esClienteCriticoBase = mapClientesCriticos.get(dniLimpio) || false;
+                    const esClientePremiumBase = mapClientesPremium.get(dniLimpio) || false;
+                    const determinarCriticidad = data.esCritico || esClienteCriticoBase;
+
+                    const latFinal = parseFloat(data.coordenadas?.lat || data.coordenada?.lat || 0);
+                    const lngFinal = parseFloat(data.coordenadas?.lng || data.coordenada?.lng || 0);
+
+                    pedidosData.push({
+                        id: docSnap.id,
+                        fecha: data.fecha,
+                        franjaHoraria: data.franjaHoraria || '10:00-14:00',
+                        importe: parseFloat(data.importe || 0),
+                        esCritico: determinarCriticidad,
+                        isPremium: esClientePremiumBase, 
+                        motivoCritico: data.motivoCritico || (esClienteCriticoBase ? 'Operador crítico calificado' : ''),
+                        numeroPedido: data.numeroPedido || 'S/N', 
+                        internoAsignado: data.interno_asignado || null,
+                        direccion: data.direccion || '',
+                        coordenadas: { lat: latFinal, lng: lngFinal }
+                    });
                 });
-            });
 
-            const currentStore = store.getState();
-            store.setState({
-                ...currentStore,
-                pedidos: pedidosData
-            });
-        }, (error) => {
-            console.error("Fallo de sincronización en tiempo real: ", error);
-        });
+                const currentStore = store.getState();
+                store.setState({
+                    ...currentStore,
+                    pedidos: pedidosData
+                });
+            },
+            (error) => console.error("Fallo de red en canal logístico: ", error)
+        );
     }
 
     setupEventListeners() {
         if (!this.filterSelect) return;
         this.filterSelect.addEventListener('change', (e) => {
             const currentStore = store.getState();
-            const filtrosActuales = currentStore.filtros || { franjaHoraria: 'all' };
             store.setState({
                 ...currentStore,
-                filtros: { ...filtrosActuales, franjaHoraria: e.target.value }
+                filtros: { ...currentStore.filtros, franjaHoraria: e.target.value }
             });
         });
     }
@@ -157,20 +140,24 @@ export class ShippingController {
             this.btnConfirmarLote.addEventListener('click', async () => {
                 if (this.loteIdsSeleccionados.length === 0) return;
                 const internoElegido = this.selectTransporteLote.value;
+                
                 if (!internoElegido) {
-                    alert("❌ Seleccione una unidad válida.");
+                    alert("❌ Modulo perimetral: Seleccione una unidad de destino válida.");
                     return;
                 }
 
                 try {
-                    const batch = writeBatch(db);
-                    this.loteIdsSeleccionados.forEach(pedidoId => {
-                        batch.update(doc(db, "pedidos", pedidoId), { interno_asignado: internoElegido });
-                    });
-                    await batch.commit();
-                    alert(`¡Lote asignado con éxito al Interno #${internoElegido}!`);
+                    // Actualizamos secuencialmente a través del mutador optimizado en lote
+                    const lotePromesas = this.loteIdsSeleccionados.map(pedidoId => 
+                        DatabaseService.actualizarPedido(pedidoId, { interno_asignado: internoElegido })
+                    );
+                    await Promise.all(lotePromesas);
+                    
+                    alert(`¡Lote operativo asignado correctamente al Interno #${internoElegido}!`);
                     this.dialogAsignacion.close();
-                } catch (err) { console.error("Error al despachar lote:", err); }
+                } catch (err) { 
+                    console.error("Error al despachar lote transaccional: ", err); 
+                }
             });
         }
     }
@@ -197,7 +184,7 @@ export class ShippingController {
     renderListSidebar(pedidos) {
         if (!this.sidebarContainer) return;
         if (pedidos.length === 0) {
-            this.sidebarContainer.innerHTML = `<div style="color: #94a3b8; text-align: center; padding: 2rem; font-size: 0.9rem;">No hay pedidos disponibles para asignar.</div>`;
+            this.sidebarContainer.innerHTML = `<div class="placeholder-vacio-jornada">No hay pedidos disponibles para asignar en esta zona.</div>`;
             return;
         }
 
@@ -206,9 +193,10 @@ export class ShippingController {
             const importeSeguro = parseFloat(p.importe).toLocaleString('es-AR', { minimumFractionDigits: 2 });
             const franjaClass = this._getClassPorFranja(p.franjaHoraria);
 
-            let claseAlertaFila = ""; let iconoTag = "";
-            if (p.esCritico) { claseAlertaFila = " order-item--critical-alert"; iconoTag = "🔥 "; }
-            else if (p.isPremium) { claseAlertaFila = " order-item--premium-alert"; iconoTag = "⭐ "; }
+            let claseAlertaFila = ""; 
+            let iconoTag = "";
+            if (p.esCritico) { claseAlertaFila = " card-pedido--critical-alert"; iconoTag = "🔥 "; }
+            else if (p.isPremium) { claseAlertaFila = " card-pedido--premium-alert"; iconoTag = "⭐ "; }
 
             return `
                 <div class="card-pedido ${franjaClass}${claseAlertaFila}" data-id="${Sanitizer.escapeHTML(p.id)}">
@@ -240,19 +228,29 @@ export class ShippingController {
         this.loteCantidadDisplay.textContent = selectedIds.length;
 
         try {
-            const flotaSnap = await getDocs(collection(db, "flota_maestra"));
-            let optionsHtml = '<option value="">-- Seleccione Unidad de Destino --</option>';
+            const flotaSnap = await DatabaseService.buscarUnidadEnFlotaMaestra();
+            let optionsHtml = '<option value="">-- Seleccione Unidad de Destino Central --</option>';
             flotaSnap.forEach(docSnap => {
                 const f = docSnap.data();
                 optionsHtml += `<option value="${Sanitizer.escapeHTML(docSnap.id)}">Interno #${Sanitizer.escapeHTML(docSnap.id)} - ${Sanitizer.escapeHTML(f.chofer)}</option>`;
             });
             this.selectTransporteLote.innerHTML = optionsHtml;
             if (this.dialogAsignacion) this.dialogAsignacion.showModal();
-        } catch (err) { console.error(err); }
+        } catch (err) { 
+            console.error("Fallo estructural al renderizar flota modal: ", err); 
+        }
+    }
+
+    unmount() {
+        if (typeof this.unsubscribePedidos === 'function') this.unsubscribePedidos();
+        if (typeof this.unsubscribeStore === 'function') this.unsubscribeStore();
+        console.log("⚓ Canales cartográficos purgados de memoria del cliente.");
     }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     const shippingCtrl = new ShippingController();
     shippingCtrl.init();
+
+    window.addEventListener('beforeunload', () => shippingCtrl.unmount());
 });

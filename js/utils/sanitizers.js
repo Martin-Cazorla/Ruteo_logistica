@@ -1,13 +1,13 @@
 // js/utils/sanitizers.js
 
 /**
- * Utilidades preventivas de seguridad frontend.
+ * Utilidades preventivas de seguridad frontend corporativa.
  */
-const Sanitizer = {
+export const Sanitizer = Object.freeze({
     /**
-     * Sanitiza strings para prevenir ataques XSS al renderizar HTML de forma dinámica.
+     * Sanitiza cadenas de texto para prevenir vectores XSS en renderizados dinámicos.
      * @param {string} rawString 
-     * @returns {string} string escapada de forma segura
+     * @returns {string} cadena de texto sanitizada
      */
     escapeHTML(rawString) {
         if (!rawString) return '';
@@ -21,7 +21,4 @@ const Sanitizer = {
         };
         return String(rawString).replace(/[&<>"'/]/g, (match) => map[match]);
     }
-};
-
-// Exportación por defecto para máxima compatibilidad con ES6 nativo
-export default Sanitizer;
+});

@@ -1,58 +1,58 @@
 // js/modules/excelParser.js
 
-export const ExcelParser = {
+export const ExcelParser = Object.freeze({
     /**
-     * Procesa el archivo File de la planilla Jumbo y extrae los datos limpios requeridos.
+     * Procesa la planilla Jumbo inyectando los tipos de datos normalizados para geocodificación
      * @param {File} file Archivo binario obtenido del input HTML
-     * @returns {Promise<Array>} Promesa con la lista de pedidos homologados
+     * @returns {Promise<Array>} Lista homologada de pedidos
      */
     importarPedidoJumbo(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
 
-            reader.onload = (e) => {
+            reader.onload = async (e) => {
                 try {
-                    const data = new Uint8Array(e.target.result);
-                    // LECTURA DE SCRIPT INTERNO DE SHEETJS (Cargado en el HTML)
-                    const workbook = XLSX.read(data, { type: 'array' });
+                    // Verificación modular dinámica de SheetJS para evitar colisiones globales
+                    if (typeof window.XLSX === 'undefined') {
+                        throw new Error("Librería de procesamiento SheetJS (XLSX) no disponible en el contexto global.");
+                    }
                     
-                    // Tomamos la primera hoja del libro de Excel de Jumbo
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = window.XLSX.read(data, { type: 'array' });
+                    
                     const firstSheetName = workbook.SheetNames[0];
                     const worksheet = workbook.Sheets[firstSheetName];
                     
-                    // Convertimos la matriz en formato JSON estructurado por filas
-                    const rows = XLSX.utils.sheet_to_json(worksheet);
+                    const rows = window.XLSX.utils.sheet_to_json(worksheet);
                     
-                    // Mapeo selectivo e higienización de los datos de la planilla
-                    const pedidosFormateados = rows.map(row => {
-                        // Limpieza del importe removiendo signos monetarios extraños si existieran
-                        const importeLimpio = String(row.originalAmount || row.totalAmount)
-                                                .replace(/[^0-9.-]+/g, "");
+                    const pedidosFormateados = rows.map((row, indice) => {
+                        const rawAmount = row.originalAmount || row.totalAmount || row.Amount || 0;
+                        const importeLimpio = String(rawAmount).replace(/[^0-9.-]+/g, "");
+                        
+                        const idPedidoCompuesto = row.id ? String(row.id).trim() : `JMB-OPT-${Date.now()}-${indice}`;
+                        const numeroOrden = row.commerceOrder || row.commerceId || row.orderNumber || `N/O-${indice}`;
 
                         return {
-                            idPedido: String(row.id).trim(),
-                            numeroPedido: String(row.commerceOrder || row.commerceId).trim(),
-                            clienteDni: String(row.customerIdentification).trim(),
-                            clienteNombre: String(row.customerName).trim(),
-                            direccion: String(row.shippingStreet).trim(),
-                            // Establecemos por defecto la fecha del día de procesamiento
-                            fecha: new Date().toISOString().split('T')[0],
-                            // Algoritmo de asignación de franja horaria por defecto (o extraída de las notas)
+                            idPedido: idPedidoCompuesto,
+                            numeroPedido: String(numeroOrden).trim(),
+                            clienteDni: row.customerIdentification ? String(row.customerIdentification).trim() : 'S/D',
+                            clienteNombre: row.customerName ? String(row.customerName).trim() : 'Consumidor Final',
+                            direccion_entrega: row.shippingStreet ? String(row.shippingStreet).trim() : '',
+                            fecha_creacion: new Date().toISOString().split('T')[0],
                             franjaHoraria: "10:00-14:00", 
                             importe: parseFloat(importeLimpio) || 0,
-                            // Coordenadas base por defecto para ser reprocesadas por el geocodificador pasivo
-                            coordenadas: { lat: -34.6037, lng: -58.3816 } 
+                            coordenada: { lat: 0, lng: 0 } // Se propaga vacío para obligar al despachador a resolver vía Nominatim/Caché
                         };
                     });
 
                     resolve(pedidosFormateados);
                 } catch (error) {
-                    reject(new Error("Error al procesar la estructura interna del Excel: " + error.message));
+                    reject(new Error("Error estructural al parsear las celdas del Excel Jumbo: " + error.message));
                 }
             };
 
-            reader.onerror = () => reject(new Error("Error en la lectura física del archivo binario."));
+            reader.onerror = () => reject(new Error("Error físico en la pasarela de lectura del FileReader binario."));
             reader.readAsArrayBuffer(file);
         });
     }
-};
+});

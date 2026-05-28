@@ -1,119 +1,128 @@
 // js/controllers/indexController.js
-import { db } from '../services/firebaseConfig.js';
+import { DatabaseService } from '../services/databaseService.js';
 import { Sanitizer } from '../utils/sanitizers.js';
-import { collection, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
 
 class IndexController {
     constructor() {
-        // Mapeo seguro de los nodos del DOM para los indicadores numéricos
         this.kpiPedidos = document.getElementById('kpi-pedidos');
         this.kpiUnidades = document.getElementById('kpi-unidades');
         this.kpiExtras = document.getElementById('kpi-extras');
-        
-        // Contenedor del Top 10 Clientes Críticos
         this.containerCriticos = document.getElementById('append-kpi-criticos');
         
-        // Captura de la fecha actual en formato NoSQL (YYYY-MM-DD)
         this.fechaHoy = new Date().toISOString().split('T')[0];
+        
+        // Almacén dinámico para los recolectores de basura de Firebase (Anti-Memory Leak)
+        this.tokensDesuscripcion = [];
     }
 
-    init() {
-        // Inicializamos las escuchas en tiempo real de forma independiente
+    /**
+     * Inicializa las conexiones de red y mapea el ciclo de vida del componente
+     */
+    mount() {
         this.escucharPedidosDelDia();
         this.escucharFlotaYHorasExtras();
         this.escucharClientesCriticos();
     }
 
     /**
-     * Monitorea la cantidad de órdenes inyectadas en la jornada actual
+     * Desconecta todas las pasarelas WebSocket abiertas al destruir o cambiar la vista
      */
+    unmount() {
+        this.tokensDesuscripcion.forEach(unsub => {
+            if (typeof unsub === 'function') unsub();
+        });
+        this.tokensDesuscripcion = [];
+        console.log("⚓ Canales de tiempo real purgados correctamente de la memoria.");
+    }
+
     escucharPedidosDelDia() {
         if (!this.kpiPedidos) return;
 
-        const q = query(collection(db, "pedidos"), where("fecha", "==", this.fechaHoy));
-        
-        onSnapshot(q, (snapshot) => {
-            this.kpiPedidos.textContent = snapshot.size;
-        }, (error) => {
-            console.error("Fallo al sincronizar KPIs de pedidos:", error);
-        });
+        const unsub = DatabaseService.subscribePedidosPorFecha(
+            this.fechaHoy,
+            (snapshot) => {
+                this.kpiPedidos.textContent = snapshot.size;
+            },
+            (error) => console.error("Fallo operativo en KPI pedidos:", error)
+        );
+
+        this.tokensDesuscripcion.push(unsub);
     }
 
-    /**
-     * Calcula dinámicamente las unidades totales y cuántas rompieron el tope de 3 vueltas
-     */
     escucharFlotaYHorasExtras() {
         if (!this.kpiUnidades || !this.kpiExtras) return;
 
-        onSnapshot(collection(db, "unidades"), (snapshot) => {
-            let totalUnidades = snapshot.size;
-            let totalExtras = 0;
+        const unsub = DatabaseService.subscribeFlotaCompleta(
+            (snapshot) => {
+                let totalUnidades = snapshot.size;
+                let totalExtras = 0;
 
-            snapshot.forEach((doc) => {
-                const unidad = doc.data();
-                // Regla de negocio: la 4ta vuelta activa automáticamente la alerta de hora extra
-                if (unidad.vueltasRealizadas >= 4) {
-                    totalExtras++;
-                }
-            });
+                snapshot.forEach((doc) => {
+                    const unidad = doc.data();
+                    if (unidad.vueltasRealizadas >= 4) {
+                        totalExtras++;
+                    }
+                });
 
-            this.kpiUnidades.textContent = totalUnidades;
-            this.kpiExtras.textContent = totalExtras;
-        }, (error) => {
-            console.error("Fallo al sincronizar KPIs de flota:", error);
-        });
+                this.kpiUnidades.textContent = totalUnidades;
+                this.kpiExtras.textContent = totalExtras;
+            },
+            (error) => console.error("Fallo operativo en KPI flota:", error)
+        );
+
+        this.tokensDesuscripcion.push(unsub);
     }
 
-    /**
-     * Renderiza de forma reactiva el top de clientes preferenciales con alertas activas
-     */
     escucharClientesCriticos() {
         if (!this.containerCriticos) return;
 
-        const q = query(collection(db, "clientes"), where("critico", "==", true));
+        const unsub = DatabaseService.subscribeClientesCriticos(
+            (snapshot) => {
+                if (snapshot.size === 0) {
+                    this.containerCriticos.innerHTML = `
+                        <p class="critical-client-row__empty-state">
+                            No se registran alertas de clientes preferenciales críticas hoy.
+                        </p>
+                    `;
+                    return;
+                }
 
-        onSnapshot(q, (snapshot) => {
-            if (snapshot.size === 0) {
-                this.containerCriticos.innerHTML = `
-                    <p style="color: #94a3b8; text-align: center; padding: 1rem;">
-                        No se registran alertas de clientes preferenciales críticas hoy.
-                    </p>
-                `;
-                return;
-            }
+                let html = "";
+                snapshot.forEach((docSnap) => {
+                    const cliente = docSnap.data();
+                    
+                    const nombreSeguro = Sanitizer.escapeHTML(cliente.nombre);
+                    const dniSeguro = Sanitizer.escapeHTML(cliente.dni);
+                    const direccionSegura = Sanitizer.escapeHTML(cliente.direccion);
+                    const motivoSeguro = Sanitizer.escapeHTML(cliente.motivoCritico || "Alerta Logística Activa");
 
-            let html = "";
-            snapshot.forEach((docSnap) => {
-                const cliente = docSnap.data();
-                
-                // Higienización exhaustiva de campos de texto libre contra inyecciones XSS
-                const nombreSeguro = Sanitizer.escapeHTML(cliente.nombre);
-                const dniSeguro = Sanitizer.escapeHTML(cliente.dni);
-                const direccionSegura = Sanitizer.escapeHTML(cliente.direccion);
-                const motivoSeguro = Sanitizer.escapeHTML(cliente.motivoCritico || "Alerta Logística Activa");
-
-                html += `
-                    <div class="card-panel" style="background-color: #1e293b; border-left: 4px solid #f97316; flex-direction: row; justify-content: space-between; align-items: center; padding: 1rem; gap: 1rem;">
-                        <div>
-                            <h4 style="margin:0; color:#f8fafc;">${nombreSeguro} (DNI: ${dniSeguro})</h4>
-                            <p style="margin: 0.25rem 0 0 0; color:#94a3b8; font-size:0.85rem;">📍 ${direccionSegura}</p>
+                    html += `
+                        <div class="critical-client-row">
+                            <div class="critical-client-row__info">
+                                <h3 class="critical-client-row__title">${nombreSeguro} (DNI: ${dniSeguro})</h3>
+                                <p class="critical-client-row__meta">📍 ${direccionSegura}</p>
+                            </div>
+                            <span class="critical-client-row__badge">
+                                ${motivoSeguro}
+                            </span>
                         </div>
-                        <span class="badge badge--danger" style="background-color: rgba(249, 115, 22, 0.2); color: #f97316; border-color: #f97316; white-space: nowrap;">
-                            ${motivoSeguro}
-                        </span>
-                    </div>
-                `;
-            });
+                    `;
+                });
 
-            this.containerCriticos.innerHTML = html;
-        }, (error) => {
-            console.error("Fallo al sincronizar panel de clientes críticos:", error);
-        });
+                this.containerCriticos.innerHTML = html;
+            },
+            (error) => console.error("Fallo operativo en panel crítico:", error)
+        );
+
+        this.tokensDesuscripcion.push(unsub);
     }
 }
 
-// Inicialización automática al montarse el módulo en el DOM de la página principal
+// Inicialización controlada por el DOM de la aplicación principal
 document.addEventListener('DOMContentLoaded', () => {
     const indexCtrl = new IndexController();
-    indexCtrl.init();
+    indexCtrl.mount();
+
+    // Vinculamos la purga al ciclo de descarga de la ventana para evitar hilos huerfanos
+    window.addEventListener('beforeunload', () => indexCtrl.unmount());
 });

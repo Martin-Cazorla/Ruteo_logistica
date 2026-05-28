@@ -1,40 +1,156 @@
 // scss/pages/_transporte.scss
-@use '../base/variables' as *;
+@use '../base/variables' as var;
 
-// Estructura contenedora de la vista de flota
 .dashboard-container {
-  padding: 2rem;
-  background-color: $color-bg-dark;
-  min-height: calc(100vh - 70px); 
-  box-sizing: border-box; // Asegura que el padding interno no deforme el cálculo de altura de la pantalla
+  padding: 1.5rem;
+  background-color: var.$color-bg-dark;
+  min-height: calc(100vh - 70px);
+  box-sizing: border-box;
+
+  @media (min-width: 768px) {
+    padding: 2rem;
+  }
 }
 
-// Grilla operativa de doble columna (Formulario vs Listado Maestro)
 .grid-two-columns {
   display: grid;
   grid-template-columns: 1fr;
   gap: 1.5rem;
-  align-items: start; // Evita que los paneles se estiren verticalmente de forma despareja
+  align-items: start;
 
   @media (min-width: 1024px) {
     grid-template-columns: 450px 1fr; 
   }
 }
 
-// Caja de filtrado reactivo del lado del cliente
 .search-box {
   width: 100%;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.75rem;
 
-  input[type="search"] {
+  &__input {
     width: 100%;
   }
 }
 
-// Texto descriptivo de asistencia operativa
 .instruction-text {
-  color: $color-text-muted;
+  color: var.$color-text-muted;
   font-size: 0.9rem;
   line-height: 1.4;
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 0.75rem 0;
+}
+
+.action-buttons-group {
+  display: flex;
+  gap: 0.75rem;
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.transporte-master-row {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.25rem;
+  background-color: var.$color-bg-card;
+  border: 1px solid var.$color-border;
+  border-radius: var.$radius-lg;
+  margin-bottom: 0.75rem;
+  transition: var.$transition-smooth;
+
+  @media (min-width: 640px) {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  &:hover {
+    border-color: var.$color-time-16-19;
+  }
+
+  &__info-block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  &__interno {
+    font-size: 1.15rem;
+    color: var.$color-text-main;
+    font-weight: 700;
+  }
+
+  &__meta {
+    font-size: 0.9rem;
+    color: var.$color-text-muted;
+    
+    strong {
+      color: var.$color-text-main;
+    }
+  }
+
+  &__capacity {
+    font-size: 0.85rem;
+    color: #64748b;
+  }
+
+  &__notes-preview {
+    font-size: 0.82rem;
+    color: #ea8808;
+    margin-top: 0.25rem;
+    display: block;
+  }
+
+  &__actions-block {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    width: 100%;
+
+    @media (min-width: 640px) {
+      width: auto;
+      justify-content: flex-end;
+    }
+
+    .btn-primary {
+      width: auto;
+      flex: 1;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
+      white-space: nowrap;
+
+      @media (min-width: 640px) {
+        flex: none;
+      }
+    }
+  }
+}
+
+.modal-listado-novedades {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+  margin-top: 1rem;
+
+  &__item {
+    background-color: rgba(239, 68, 68, 0.08);
+    border-left: 3px solid var.$color-time-10-14;
+    padding: 0.75rem;
+    border-radius: var.$radius-md;
+    font-size: 0.85rem;
+    color: var.$color-text-main;
+    line-height: 1.4;
+  }
+
+  &__item--empty {
+    color: var.$color-success;
+    background-color: rgba(16, 185, 129, 0.08);
+    border-left: 3px solid var.$color-time-13-16;
+    text-align: center;
+    padding: 1.5rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
 }

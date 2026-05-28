@@ -9,48 +9,44 @@
 <body>
 
     <header class="app-header">
-        <nav class="app-navbar" aria-label="Menú global del ecosistema">
-            <div class="brand-title">Martinez Routing Central</div>
-            <div class="dashboard-counters">
-                <a href="index.html" class="nav-link nav-link--active">Inicio</a>
-                <a href="pages/dashboard.html" class="nav-link">Panel de Carga</a>
-                <a href="pages/shipping.html" class="nav-link">Consola Mapa</a>
-                <a href="pages/transporte.html" class="nav-link">Flota</a>
-                <a href="pages/administracion.html" class="nav-link">Seguridad</a>
+        <nav class="app-navbar" aria-label="Navegación principal del sistema">
+            <div class="app-navbar__brand">Martinez Routing Central</div>
+            <div class="app-navbar__menu">
+                <a href="index.html" class="app-navbar__link app-navbar__link--active" aria-current="page">Inicio</a>
+                <a href="pages/dashboard.html" class="app-navbar__link">Panel de Carga</a>
+                <a href="pages/shipping.html" class="app-navbar__link">Consola Mapa</a>
+                <a href="pages/transporte.html" class="app-navbar__link">Flota</a>
+                <a href="pages/administracion.html" class="app-navbar__link">Seguridad</a>
             </div>
         </nav>
     </header>
 
-    <main style="padding: 2rem; background-color: #0f172a; min-height: calc(100vh - 70px);">
-        <section aria-label="Métricas de rendimiento operativo" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
-            <div class="card-panel">
-                <span style="color: #94a3b8; text-transform: uppercase; font-size: 0.8rem; font-weight: 600;">Pedidos de la Jornada</span>
-                <strong id="kpi-pedidos" style="color: #f8fafc; font-size: 2.2rem; margin-top: 0.5rem;">0</strong>
+    <main class="dashboard-view">
+        <section class="dashboard-view__kpi-grid" aria-label="Indicadores clave de rendimiento operativo">
+            <div class="card-panel kpi-card">
+                <span class="kpi-card__label">Pedidos de la Jornada</span>
+                <strong id="kpi-pedidos" class="kpi-card__value kpi-card__value--default">0</strong>
             </div>
-            <div class="card-panel">
-                <span style="color: #94a3b8; text-transform: uppercase; font-size: 0.8rem; font-weight: 600;">Unidades Desplegadas</span>
-                <strong id="kpi-unidades" style="color: #3b82f6; font-size: 2.2rem; margin-top: 0.5rem;">0</strong>
+            <div class="card-panel kpi-card">
+                <span class="kpi-card__label">Unidades Desplegadas</span>
+                <strong id="kpi-unidades" class="kpi-card__value kpi-card__value--info">0</strong>
             </div>
-            <div class="card-panel">
-                <span style="color: #94a3b8; text-transform: uppercase; font-size: 0.8rem; font-weight: 600;">Alertas por Horas Extras</span>
-                <strong id="kpi-extras" style="color: #ef4444; font-size: 2.2rem; margin-top: 0.5rem;">0</strong>
+            <div class="card-panel kpi-card">
+                <span class="kpi-card__label">Alertas por Horas Extras</span>
+                <strong id="kpi-extras" class="kpi-card__value kpi-card__value--danger">0</strong>
             </div>
         </section>
 
-        <section class="dashboard-grid" style="padding:0; grid-template-columns: 1fr;">
+        <section class="dashboard-view__main-panel" aria-label="Alertas prioritarias">
             <div class="card-panel">
-                <h2 class="panel-title" style="color: #f97316;">⚠️ Top 10 Clientes Críticos con Reclamos Pendientes</h2>
-                <div class="list-scroll-box" id="append-kpi-criticos" role="region" aria-live="polite" style="margin-top: 1rem;"></div>
+                <h2 class="card-panel__title">⚠️ Top 10 Clientes Críticos con Reclamos Pendientes</h2>
+                <div id="append-kpi-criticos" class="list-scroll-box" role="region" aria-live="polite">
+                    </div>
             </div>
         </section>
     </main>
 
-    <script type="module">
-        import { checkAuthGuard } from './js/utils/authGuard.js';
-        // Al estar en la raíz, el guardián verifica y redirige si no hay sesión activa
-        checkAuthGuard('pages/login.html');
-    </script>
-    
+    <script type="module" src="./js/app.js"></script>
     <script type="module" src="./js/controllers/indexController.js"></script>
 </body>
 </html>

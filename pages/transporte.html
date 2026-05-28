@@ -10,14 +10,14 @@
 
     <header class="app-header">
         <nav class="app-navbar" aria-label="Navegación del sistema">
-            <div class="brand-title">Martinez Routing Flota</div>
-            <div class="dashboard-counters">
-                <a href="../index.html" class="nav-link">Inicio</a>
-                <a href="dashboard.html" class="nav-link">Panel de Carga</a>
-                <a href="shipping.html" class="nav-link">Consola Mapa</a>
-                <a href="transporte.html" class="nav-link nav-link--active">Flota</a>
-                <a href="clientes.html" class="nav-link">Clientes</a>
-                <a href="administracion.html" class="nav-link">Seguridad</a>
+            <div class="app-navbar__brand">Martinez Routing Flota</div>
+            <div class="app-navbar__menu">
+                <a href="../index.html" class="app-navbar__link">Inicio</a>
+                <a href="dashboard.html" class="app-navbar__link">Panel de Carga</a>
+                <a href="shipping.html" class="app-navbar__link">Consola Mapa</a>
+                <a href="transporte.html" class="app-navbar__link app-navbar__link--active" aria-current="page">Flota</a>
+                <a href="clientes.html" class="app-navbar__link">Clientes</a>
+                <a href="administracion.html" class="app-navbar__link">Seguridad</a>
             </div>
         </nav>
     </header>
@@ -26,48 +26,48 @@
         <div class="grid-two-columns">
             
             <section class="card-panel" aria-labelledby="form-flota-title">
-                <h2 id="form-flota-title" class="section-title">Alta de Unidad Nueva (Fichero Maestro)</h2>
+                <h2 id="form-flota-title" class="card-panel__title">Alta de Unidad Nueva (Fichero Maestro)</h2>
                 <p class="instruction-text">Registre las camionetas estables que integran la flota de distribución de Jumbo Martinez.</p>
                 
                 <form id="form-alta-transporte" class="form-vertical">
                     <input type="hidden" id="t-id-edicion">
 
                     <div class="form-group">
-                        <label for="t-numero-unidad">Número de Unidad (Interno Fijo):</label>
-                        <input type="text" id="t-numero-unidad" class="select-field" placeholder="Ej: 99" required autocomplete="off">
+                        <label for="t-numero-unidad" class="form-group__label">Número de Unidad (Interno Fijo):</label>
+                        <input type="text" id="t-numero-unidad" class="form-group__input" placeholder="Ej: 99" required autocomplete="off">
                     </div>
                     <div class="form-group">
-                        <label for="t-modelo-unidad">Modelo del Vehículo:</label>
-                        <input type="text" id="t-modelo-unidad" class="select-field" placeholder="Ej: Renault Master 2.5 DCI" required autocomplete="off">
+                        <label for="t-modelo-unidad" class="form-group__label">Modelo del Vehículo:</label>
+                        <input type="text" id="t-modelo-unidad" class="form-group__input" placeholder="Ej: Renault Master 2.5 DCI" required autocomplete="off">
                     </div>
                     <div class="form-group">
-                        <label for="t-nombre-chofer">Nombre y Apellido del Chofer:</label>
-                        <input type="text" id="t-nombre-chofer" class="select-field" placeholder="Ej: Carlos Vitale" required autocomplete="off">
+                        <label for="t-nombre-chofer" class="form-group__label">Nombre y Apellido del Chofer:</label>
+                        <input type="text" id="t-nombre-chofer" class="form-group__input" placeholder="Ej: Carlos Vitale" required autocomplete="off">
                     </div>
                     <div class="form-group">
-                        <label for="t-tamanio-unidad">Capacidad / Tamaño de Carga:</label>
-                        <select id="t-tamanio-unidad" class="select-field" required>
+                        <label for="t-tamanio-unidad" class="form-group__label">Capacidad / Tamaño de Carga:</label>
+                        <select id="t-tamanio-unidad" class="form-group__input" required>
                             <option value="Chico">Chico (Furgón)</option>
                             <option value="Mediano">Mediano (Chasis)</option>
                             <option value="Grande">Grande (Balancín / Master)</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="t-comentarios-unidad">Historial de Observaciones / Reclamos de la Unidad:</label>
-                        <textarea id="t-comentarios-unidad" class="select-field" rows="4" placeholder="Detalles de mantenimiento, estado mecánico o reclamos permanentes de la unidad..."></textarea>
+                        <label for="t-comentarios-unidad" class="form-group__label">Historial de Observaciones / Reclamos:</label>
+                        <textarea id="t-comentarios-unidad" class="form-group__input" rows="4" placeholder="Detalles de mantenimiento, estado mecánico o reclamos..."></textarea>
                     </div>
                     
-                    <div class="action-buttons-group" style="display: flex; gap: 0.75rem; width: 100%;">
-                        <button type="submit" id="btn-submit-transporte" class="btn-primary w-100">Guardar en Fichero Global</button>
-                        <button type="button" id="btn-cancelar-edicion" class="btn-secondary" style="display: none; background-color: #475569;">Cancelar Edición</button>
+                    <div class="action-buttons-group">
+                        <button type="submit" id="btn-submit-transporte" class="btn-primary">Guardar en Fichero Global</button>
+                        <button type="button" id="btn-cancelar-edicion" class="btn-primary" style="display: none; background-color: #475569;">Cancelar Edición</button>
                     </div>
                 </form>
             </section>
 
             <section class="card-panel" aria-labelledby="list-flota-title">
-                <h2 id="list-flota-title" class="section-title">Fichero General de Flota Activa</h2>
+                <h2 id="list-flota-title" class="card-panel__title">Fichero General de Flota Activa</h2>
                 <div class="search-box">
-                    <input type="search" id="search-flota" class="select-field" placeholder="Buscar por número de interno, modelo o chofer...">
+                    <input type="search" id="search-flota" class="form-group__input" placeholder="Buscar por número de interno, modelo o chofer..." aria-label="Buscar unidades">
                 </div>
                 <div id="listado-flota-maestra" class="list-scroll-box" role="region" aria-live="polite">
                     </div>
@@ -76,18 +76,20 @@
         </div>
     </main>
 
-    <div id="modal-historial-reclamos" class="modal-overlay" aria-hidden="true" role="dialog">
+    <div id="modal-historial-reclamos" class="modal-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="modal-historial-title">
         <div class="modal-content">
             <header class="modal-header">
-                <h3>Historial de Novedades - Interno #<span id="modal-interno-titulo">00</span></h3>
+                <h3 id="modal-historial-title">Historial de Novedades - Interno #<span id="modal-interno-titulo">00</span></h3>
                 <button class="btn-close-modal" id="btn-cerrar-modal-reclamos" aria-label="Cerrar ventana">&times;</button>
             </header>
             <div class="card-panel">
                 <p class="instruction-text">Registro acumulado de alertas mecánicas y reclamos reportados</p>
-                <div id="modal-listado-novedades" class="list-scroll-box" style="max-height: 300px; overflow-y: auto;"></div>
+                <div id="modal-listado-novedades" class="modal-listado-novedades"></div>
             </div>
         </div>
     </div>
 
+    <script type="module" src="../js/app.js"></script>
     <script type="module" src="../js/controllers/transporteController.js"></script>
 </body>
+</html>

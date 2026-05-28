@@ -13,14 +13,14 @@
 
     <header class="app-header">
         <nav class="app-navbar" aria-label="Navegación principal de control">
-            <div class="brand-title">Martinez Routing v2.5</div>
-            <div class="dashboard-counters">
-                <a href="../index.html" class="nav-link">Inicio</a>
-                <a href="dashboard.html" class="nav-link">Panel de Carga</a>
-                <a href="shipping.html" class="nav-link nav-link--active">Consola Mapa</a>
-                <a href="transporte.html" class="nav-link">Flota</a>
-                <a href="clientes.html" class="nav-link">Clientes</a>
-                <a href="administracion.html" class="nav-link">Seguridad</a>
+            <div class="app-navbar__brand">Martinez Routing Central</div>
+            <div class="app-navbar__menu">
+                <a href="../index.html" class="app-navbar__link">Inicio</a>
+                <a href="dashboard.html" class="app-navbar__link">Panel de Carga</a>
+                <a href="shipping.html" class="app-navbar__link app-navbar__link--active" aria-current="page">Consola Mapa</a>
+                <a href="transporte.html" class="app-navbar__link">Flota</a>
+                <a href="clientes.html" class="app-navbar__link">Clientes</a>
+                <a href="administracion.html" class="app-navbar__link">Seguridad</a>
             </div>
         </nav>
     </header>
@@ -28,20 +28,20 @@
     <div class="filter-bar" role="toolbar" aria-label="Filtro global de jornada cartográfica">
         <div class="filter-group">
             <label for="map-date-filter"><strong>Visualizar Mapa de la Jornada:</strong></label>
-            <input type="date" id="map-date-filter" class="select-field" aria-required="true" onclick="this.showPicker()">
+            <input type="date" id="map-date-filter" aria-required="true">
         </div>
     </div>
 
-    <main class="shipping-container" style="margin-top: 0.5rem;">
-        <section class="map-wrapper" aria-label="Mapa de Distribución Geográfica">
-            <div id="map"></div>
+    <main class="shipping-container">
+        <section class="map-wrapper" aria-label="Mapa de Distribución Geoespacial">
+            <div id="map" role="region" aria-label="Mapa interactivo OpenStreetMap"></div>
         </section>
 
         <aside class="control-sidebar" aria-label="Filtros y Control de Envíos">
-            <h2>Consola de Despacho</h2>
-            <div class="filter-group">
-                <label for="filter-franja">Filtrar Ventana de Distribución:</label>
-                <select id="filter-franja" class="select-field">
+            <h2 class="control-sidebar__title">Consola de Despacho</h2>
+            <div class="form-group">
+                <label for="filter-franja" class="form-group__label">Filtrar Ventana de Distribución:</label>
+                <select id="filter-franja" class="form-group__input">
                     <option value="all">Todas las Ventanas Operativas</option>
                     <option value="10:00-14:00">Mañana (10:00 - 14:00) [Rojo]</option>
                     <option value="13:00-16:00">Mediodía (13:00 - 16:00) [Verde]</option>
@@ -49,28 +49,27 @@
                     <option value="19:00-21:30">Nocturno (19:00 - 21:30) [Negro]</option>
                 </select>
             </div>
-            <hr aria-hidden="true" style="border: 0; border-top: 1px solid #334155; margin: 0.5rem 0;">
-            <h3>Pedidos Disponibles</h3>
-            <div id="pedidos-list-append" class="list-scroll-box" role="region" aria-live="polite"></div>
+            <hr class="separator" aria-hidden="true">
+            <h3 class="control-sidebar__subtitle">Pedidos Disponibles</h3>
+            <div id="pedidos-list-append" class="list-scroll-box" role="region" aria-live="polite">
+                </div>
         </aside>
     </main>
 
-    <dialog id="modal-asignacion-flota" class="modal-base-refinado">
+    <dialog id="modal-asignacion-flota" class="modal-base-refinado" aria-modal="true" aria-labelledby="modal-title">
         <div class="modal-content-wrapper">
             <header class="modal-header-nav">
-                <h3>Asignar Lote (<span id="modal-lote-cantidad">0</span> pedidos seleccionados)</h3>
-                <button class="btn-close-x" id="btn-close-assignment-dialog" aria-label="Cerrar ventana">&times;</button>
+                <h3 id="modal-title">Asignar Lote (<span id="modal-lote-cantidad">0</span> pedidos seleccionados)</h3>
+                <button class="btn-close-x" id="btn-close-assignment-dialog" aria-label="Cerrar modal">&times;</button>
             </header>
             <div class="modal-body-form">
-                <p style="font-size: 0.82rem; color: #94a3b8; margin: 0;">Seleccione la unidad operativa de la flota central para adjudicar el recorrido seleccionado en el lazo del mapa:</p>
+                <p class="sub-alert-text">Seleccione la unidad operativa de la flota central para adjudicar el recorrido seleccionado en el lazo del mapa:</p>
                 <div class="form-group">
-                    <label for="select-transporte-lote" style="font-size: 0.78rem; font-weight: 700; color: #38bdf8;">Unidad de Destino:</label>
-                    <select id="select-transporte-lote" class="select-field"></select>
+                    <label for="select-transporte-lote" class="form-group__label">Unidad de Destino:</label>
+                    <select id="select-transporte-lote" class="form-group__input"></select>
                 </div>
                 <div class="banner-extra-toggle-box">
-                    <div class="checkbox-interactive-label">
-                        <span>⚠️ Al confirmar se actualizarán las órdenes en Firebase en tiempo real.</span>
-                    </div>
+                    <p class="sub-alert-text" style="color: #ea980a; font-weight: 700;">⚠️ Al confirmar se actualizarán las órdenes en Firebase en tiempo real.</p>
                 </div>
             </div>
             <footer class="modal-actions-footer">
@@ -80,12 +79,10 @@
         </div>
     </dialog>
 
-    <script type="module">
-        import { checkAuthGuard } from '../js/utils/authGuard.js';
-        checkAuthGuard('login.html'); 
-    </script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    
+    <script type="module" src="../js/app.js"></script>
     <script type="module" src="../js/controllers/shippingController.js"></script>
 </body>
 </html>

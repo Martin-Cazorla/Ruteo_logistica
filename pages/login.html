@@ -6,29 +6,48 @@
     <title>Martinez Routing - Acceso Operativo</title>
     <link rel="stylesheet" href="../css/main.css">
 </head>
-<body style="background-color: #0f172a; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0;">
+<body class="login-view">
 
-    <main class="card-panel" style="width: 100%; max-width: 420px; padding: 2.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.4);">
-        <header style="text-align: center; margin-bottom: 2rem;">
-            <h1 class="panel-title" style="font-size: 1.75rem; margin: 0 0 0.5rem 0; color: #f8fafc;">Martinez Routing</h1>
-            <p class="instruction-text" style="margin: 0;">Consola de Autenticación Centralizada</p>
+    <main class="login-view__container card-panel">
+        <header class="login-view__header">
+            <h1 class="login-view__title">Martinez Routing</h1>
+            <p class="login-view__subtitle">Consola de Autenticación Centralizada</p>
         </header>
 
-        <form id="form-login" autocomplete="on">
-            <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.25rem;">
-                <label for="login-email" style="color: #94a3b8; font-size: 0.9rem; font-weight: 500;">Correo Electrónico Corp:</label>
-                <input type="email" id="login-email" class="select-field" placeholder="ejemplo@martinez.com" required autocomplete="email" />
+        <form id="form-login" autocomplete="on" novalidate>
+            <div class="form-group">
+                <label for="login-email" class="form-group__label">Correo Electrónico Corp:</label>
+                <input 
+                    type="email" 
+                    id="login-email" 
+                    class="form-group__input" 
+                    placeholder="ejemplo@martinez.com" 
+                    required 
+                    autocomplete="email" 
+                    inputmode="email"
+                />
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.5rem;">
-                <label for="login-password" style="color: #94a3b8; font-size: 0.9rem; font-weight: 500;">Contraseña de Seguridad:</label>
-                <input type="password" id="login-password" class="select-field" placeholder="••••••••" required autocomplete="current-password" />
+            <div class="form-group form-group--last">
+                <label for="login-password" class="form-group__label">Contraseña de Seguridad:</label>
+                <input 
+                    type="password" 
+                    id="login-password" 
+                    class="form-group__input" 
+                    placeholder="••••••••" 
+                    required 
+                    autocomplete="current-password" 
+                />
             </div>
 
-            <div id="login-error-msg" aria-live="polite" style="color: #ef4444; font-size: 0.875rem; margin-bottom: 1rem; display: none;">
-                </div>
+            <div 
+                id="login-error-msg" 
+                class="login-view__error-container" 
+                aria-live="assertive" 
+                aria-hidden="true"
+            ></div>
 
-            <button type="submit" id="btn-login-submit" class="btn-primary" style="width: 100%; justify-content: center; padding: 0.75rem;">
+            <button type="submit" id="btn-login-submit" class="btn-primary">
                 Validar Credenciales
             </button>
         </form>

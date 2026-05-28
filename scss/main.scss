@@ -15,6 +15,7 @@
 @use 'components/modals';
 @use 'components/cards';
 // 4. Vistas y Páginas de la Aplicación
+@use 'pages/login';
 @use 'pages/dashboard';
 @use 'pages/shipping';
 @use 'pages/transporte';

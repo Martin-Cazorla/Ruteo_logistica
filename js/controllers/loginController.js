@@ -1,6 +1,5 @@
 // js/controllers/loginController.js
-import { auth } from '../services/firebaseConfig.js';
-import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+import { AuthService } from '../services/authService.js';
 
 class LoginController {
     constructor() {
@@ -19,71 +18,101 @@ class LoginController {
     }
 
     /**
-     * Procesa el formulario e inicia la negociación con Firebase Auth
+     * Procesa el formulario corporativo e inicia sesión mediante la abstracción de AuthService
      * @param {Event} event 
      */
     async handleSubmit(event) {
         event.preventDefault();
         
-        // Limpiamos estados de error previos
         this.hideError();
-        this.setLoading(true);
 
         const email = this.emailInput.value.trim();
         const password = this.passwordInput.value;
 
+        if (!this.validateInputs(email, password)) {
+            return;
+        }
+
+        this.setLoading(true);
+
         try {
-            // Firmar la sesión de forma persistente en el navegador
-            await signInWithEmailAndPassword(auth, email, password);
-            
-            // Si la autenticación es correcta, redirigimos a la raíz (index.html)
-            window.location.href = '../index.html';
+            await AuthService.login(email, password);
+            // Reemplazamos el historial de navegación para evitar bucles hacia atrás post-login
+            window.location.replace('dashboard.html');
         } catch (error) {
-            console.error("Error en Firebase Authentication:", error.code, error.message);
-            this.handleAuthErrors(error.code);
+            this.handleAuthErrors(error.code || error.message);
             this.setLoading(false);
         }
     }
 
     /**
-     * Mapea los códigos de error nativos de Firebase a mensajes claros en español
+     * Validaciones previas de formato del cliente antes de disparar la red
+     */
+    validateInputs(email, password) {
+        if (!email || !password) {
+            this.showError("Todos los campos operativos de seguridad son obligatorios.");
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Mapea códigos de error nativos de Firebase sin exponer datos internos
      * @param {string} errorCode 
      */
     handleAuthErrors(errorCode) {
-        let message = "Ocurrió un error inesperado. Verifique su conexión.";
+        let message = "Ocurrió un error inesperado. Verifique su conexión de red.";
         
         switch (errorCode) {
             case 'auth/invalid-email':
                 message = "El formato del correo electrónico corporativo no es válido.";
+                this.emailInput.setAttribute('aria-invalid', 'true');
                 break;
             case 'auth/user-disabled':
                 message = "Este operador técnico se encuentra suspendido del ecosistema.";
                 break;
             case 'auth/user-not-found':
             case 'auth/wrong-password':
-            case 'auth/invalid-credential': // Códigos combinados en Firebase moderno por seguridad
-                message = "Credenciales incorrectas. Verifique usuario y contraseña.";
+            case 'auth/invalid-credential':
+                message = "Credenciales incorrectas. Verifique usuario y contraseña de seguridad.";
+                this.emailInput.setAttribute('aria-invalid', 'true');
+                this.passwordInput.setAttribute('aria-invalid', 'true');
                 break;
             case 'auth/too-many-requests':
-                message = "Acceso bloqueado temporalmente por demasiados intentos fallidos.";
+                message = "Acceso bloqueado temporalmente por demasiados intentos fallidos corporativos.";
                 break;
         }
 
         this.showError(message);
     }
 
+    /**
+     * Despliega visual y semánticamente el mensaje de error
+     * @param {string} text 
+     */
     showError(text) {
         this.errorContainer.textContent = text;
-        this.errorContainer.style.display = 'block';
-    }
-
-    hideError() {
-        this.errorContainer.textContent = '';
-        this.errorContainer.style.display = 'none';
+        this.errorContainer.setAttribute('aria-hidden', 'false');
+        
+        // Asociamos dinámicamente los elementos con error para tecnologías de asistencia
+        this.emailInput.setAttribute('aria-describedby', 'login-error-msg');
+        this.passwordInput.setAttribute('aria-describedby', 'login-error-msg');
     }
 
     /**
-     * Bloquea el botón de envío para evitar peticiones concurrentes
+     * Limpia de forma segura el contenedor de errores
+     */
+    hideError() {
+        this.errorContainer.textContent = '';
+        this.errorContainer.setAttribute('aria-hidden', 'true');
+        this.emailInput.removeAttribute('aria-invalid');
+        this.passwordInput.removeAttribute('aria-invalid');
+        this.emailInput.removeAttribute('aria-describedby');
+        this.passwordInput.removeAttribute('aria-describedby');
+    }
+
+    /**
+     * Controla el estado del botón evitando doble envío
      * @param {boolean} isLoading 
      */
     setLoading(isLoading) {
@@ -97,7 +126,7 @@ class LoginController {
     }
 }
 
-// Inicializamos el componente una vez que el DOM esté listo
+// Inicialización controlada
 document.addEventListener('DOMContentLoaded', () => {
     new LoginController();
 });

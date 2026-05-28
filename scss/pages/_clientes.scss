@@ -1,0 +1,48 @@
+// scss/pages/_clientes.scss
+@use '../base/variables' as var;
+
+.clientes-manager {
+  &__segmentation-box {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    background-color: #1e293b;
+    padding: 1rem;
+    border-radius: var.$radius-md;
+    border: 1px solid var.$color-border;
+    margin-top: 0.5rem;
+  }
+
+  &__segmentation-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var.$color-text-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.75px;
+  }
+
+  &__checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    cursor: pointer;
+    font-size: 0.88rem;
+    color: var.$color-text-main;
+    font-weight: 600;
+    user-select: none;
+    transition: var.$transition-smooth;
+
+    input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+      
+      &:id(c-is-premium) { accent-color: #eab308; }
+      &:id(c-is-critico) { accent-color: #ef4444; }
+    }
+
+    &:hover {
+      color: #ffffff;
+    }
+  }
+}

@@ -75,7 +75,6 @@ export class DashboardController {
 
         this.escucharUnidadesJornada(fechaSeleccionada);
         this.escucharPedidosJornada(fechaSeleccionada);
-        // Dejado preparado estructuralmente para la sincronización de reclamos
     }
 
     unmountCanales() {
@@ -113,7 +112,6 @@ export class DashboardController {
                 this.formManualPedido.reset();
                 if (this.pDireccionSelectGroup) {
                     this.pDireccionSelectGroup.style.display = "none";
-                    this.pDireccionSelectGroup.setAttribute('aria-hidden', 'true');
                 }
                 const submitBtn = this.formManualPedido.querySelector('button[type="submit"]');
                 if (submitBtn) submitBtn.textContent = "Inyectar Pedido Manual";
@@ -130,13 +128,8 @@ export class DashboardController {
 
     toggleModal(modal, open) {
         if (!modal) return;
-        if (open) { 
-            modal.classList.add('open'); 
-            modal.setAttribute('aria-hidden', 'false'); 
-        } else { 
-            modal.classList.remove('open'); 
-            modal.setAttribute('aria-hidden', 'true'); 
-        }
+        if (open) { modal.classList.add('open'); modal.setAttribute('aria-hidden', 'false'); }
+        else { modal.classList.remove('open'); modal.setAttribute('aria-hidden', 'true'); }
     }
 
     escucharUnidadesJornada(fecha) {
@@ -186,7 +179,7 @@ export class DashboardController {
                     
                     htmlMaestro += `
                         <div class="bloque-horario-jornada">
-                            <h3 class="bloque-horario-jornada__title">INGRESO ${franja}</h3>
+                            <h3 class="horario-header-title">INGRESO ${franja}</h3>
                             <div class="horario-cards-grid">
                                 ${listaUnidades.map(u => {
                                     const intSeguro = Sanitizer.escapeHTML(u.interno);
@@ -198,35 +191,34 @@ export class DashboardController {
                                     const claseFinalizada = u.finalizada ? 'card-unidad-tactica--finalizada' : '';
                                     const tieneFuegoCruzado = internosConFuego.has(String(u.interno).toLowerCase());
                                     const claseFuegoEfecto = tieneFuegoCruzado ? 'card-unidad-tactica--fuego-activo' : '';
-                                    const esCriticaClase = u.entregaCampo ? 'card-unidad-tactica--critica' : '';
 
                                     return `
-                                        <article class="card-unidad-tactica ${claseUnidadEnCampo} ${claseFinalizada} ${claseFuegoEfecto} ${esCriticaClase}" 
+                                        <article class="card-panel card-unidad-tactica ${claseUnidadEnCampo} ${claseFinalizada} ${claseFuegoEfecto}" 
                                                  data-id="${u.id}" data-interno="${intSeguro}" data-notes="${notaSegura}" data-force-extra="${!!u.extraForzado}">
                                             ${u.qVueltasTotales === 3 ? '<div class="sello-jornada-cumplida">JORNADA CUMPLIDA</div>' : ''}
-                                            <div class="card-unidad-tactica__header">
-                                                <div class="card-unidad-tactica__title-wrapper">
-                                                    <strong class="card-unidad-tactica__interno">${tieneFuegoCruzado ? '🔥 ' : ''}#${intSeguro}</strong>
+                                            <div class="card-unidad-header">
+                                                <div class="card-header-left">
+                                                    <strong class="card-interno-display">${tieneFuegoCruzado ? '🔥 ' : ''}#${intSeguro}</strong>
                                                     <span class="badge ${claseCampoColor} btn-toggle-campo-express" data-id="${u.id}">${u.entregaCampo ? 'CAMPO SÍ' : 'CAMPO NO'}</span>
                                                 </div>
-                                                <button class="card-unidad-tactica__btn-remove" data-id="${u.id}" aria-label="Remover unidad">&times;</button>
+                                                <button class="btn-remover-unidad-jornada" data-id="${u.id}">&times;</button>
                                             </div>
-                                            <div class="card-unidad-tactica__info">
-                                                <span class="card-unidad-tactica__driver">${choSeguro}</span>
-                                                <span class="card-unidad-tactica__model">${modSeguro}</span>
+                                            <div class="card-unidad-info">
+                                                <span class="driver-title">${choSeguro}</span><br>
+                                                <span class="model-title">${modSeguro}</span>
                                             </div>
-                                            <div class="card-unidad-tactica__vueltas-grid">
-                                                <button class="card-unidad-tactica__btn-vuelta ${u.v10 ? 'card-unidad-tactica__btn-vuelta--on' : 'card-unidad-tactica__btn-vuelta--off'}" data-id="${u.id}" data-v="v10" ${u.finalizada ? 'disabled' : ''}>10:00</button>
-                                                <button class="card-unidad-tactica__btn-vuelta ${u.v13 ? 'card-unidad-tactica__btn-vuelta--on' : 'card-unidad-tactica__btn-vuelta--off'}" data-id="${u.id}" data-v="v13" ${u.finalizada ? 'disabled' : ''}>13:00</button>
-                                                <button class="card-unidad-tactica__btn-vuelta ${u.v16 ? 'card-unidad-tactica__btn-vuelta--on' : 'card-unidad-tactica__btn-vuelta--off'}" data-id="${u.id}" data-v="v16" ${u.finalizada ? 'disabled' : ''}>16:00</button>
-                                                <button class="card-unidad-tactica__btn-vuelta ${u.v19 ? 'card-unidad-tactica__btn-vuelta--on' : 'card-unidad-tactica__btn-vuelta--off'}" data-id="${u.id}" data-v="v19" ${u.finalizada ? 'disabled' : ''}>19:00</button>
+                                            <div class="grid-vueltas-buttons">
+                                                <button class="btn-primary btn-toggle-vuelta ${u.v10 ? 'btn-vuelta-activa' : 'btn-vuelta-apagada'}" data-id="${u.id}" data-v="v10" ${u.finalizada ? 'disabled' : ''}>10:00</button>
+                                                <button class="btn-primary btn-toggle-vuelta ${u.v13 ? 'btn-vuelta-activa' : 'btn-vuelta-apagada'}" data-id="${u.id}" data-v="v13" ${u.finalizada ? 'disabled' : ''}>13:00</button>
+                                                <button class="btn-primary btn-toggle-vuelta ${u.v16 ? 'btn-vuelta-activa' : 'btn-vuelta-apagada'}" data-id="${u.id}" data-v="v16" ${u.finalizada ? 'disabled' : ''}>16:00</button>
+                                                <button class="btn-primary btn-toggle-vuelta ${u.v19 ? 'btn-vuelta-activa' : 'btn-vuelta-apagada'}" data-id="${u.id}" data-v="v19" ${u.finalizada ? 'disabled' : ''}>19:00</button>
                                             </div>
-                                            <div class="card-unidad-tactica__counter">
+                                            <div class="vueltas-counter-display">
                                                 <span>${u.extraForzado ? 'EXTRA' : u.qVueltasTotales + '/4'}</span>
-                                                ${(u.qVueltasTotales >= 4 || u.extraForzado) ? '<span class="card-unidad-tactica__extra-label">EXTRA ACTIVADO</span>' : ''}
+                                                ${(u.qVueltasTotales >= 4 || u.extraForzado) ? '<span class="label-extra-sub">EXTRA ACTIVADO</span>' : ''}
                                             </div>
-                                            <div class="card-unidad-tactica__notes-trigger btn-trigger-modal-gestion">
-                                                📝 <em>${notaSegura || 'Agregar nota de control...'}</em>
+                                            <div class="card-unidad-footer-notes btn-trigger-modal-gestion">
+                                                📝 <em>${notaSegura || 'Haga clic para agregar nota...'}</em>
                                             </div>
                                         </article>
                                     `;
@@ -248,23 +240,23 @@ export class DashboardController {
     }
 
     vincularEventosInteractivosTarjetas() {
-        this.unidadesSeccionesContainer.querySelectorAll('.card-unidad-tactica__btn-remove').forEach(btn => {
+        this.unidadesSeccionesContainer.querySelectorAll('.btn-remover-unidad-jornada').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation(); 
                 const id = e.target.getAttribute('data-id');
-                if (confirm("¿Remover esta unidad de la jornada operativa?")) {
+                if (confirm("¿Remover esta unidad?")) {
                     await DatabaseService.removerUnidadJornada(id);
                 }
             });
         });
 
-        this.unidadesSeccionesContainer.querySelectorAll('.card-unidad-tactica__btn-vuelta').forEach(btn => {
+        this.unidadesSeccionesContainer.querySelectorAll('.btn-toggle-vuelta').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation(); 
                 const id = e.target.getAttribute('data-id'); 
                 const campoVuelta = e.target.getAttribute('data-v');
-                const estaPrendida = e.target.classList.contains('card-unidad-tactica__btn-vuelta--on');
-                if (!estaPrendida && campoVuelta === 'v16') alert("⚠️ ¡JORNADA CUMPLIDA! Alcanzó las 3 vueltas de reparto.");
+                const estaPrendida = e.target.classList.contains('btn-vuelta-activa');
+                if (!estaPrendida && campoVuelta === 'v16') alert("⚠️ ¡JORNADA CUMPLIDA! Alcanzó las 3 vueltas.");
                 await DatabaseService.actualizarCamposUnidad(id, { [campoVuelta]: !estaPrendida });
             });
         });
@@ -274,7 +266,7 @@ export class DashboardController {
                 e.stopPropagation(); 
                 const id = e.target.getAttribute('data-id');
                 const esActivoActualmente = e.target.textContent.includes('CAMPO SÍ');
-                if (!esActivoActualmente) alert("🚩 ALERTA PERIMETRAL: Unidad despachada al campo.");
+                if (!esActivoActualmente) alert("🚩 ALERTA: Despachado al campo.");
                 await DatabaseService.actualizarCamposUnidad(id, { entregaCampo: !esActivoActualmente });
             });
         });
@@ -304,25 +296,47 @@ export class DashboardController {
         });
         this.btnFinalizeUnit.addEventListener('click', async () => {
             if (!this.activeUnitIdForDialog) return;
-            if (confirm("¿Confirmar cierre final de jornada laboral? El camion quedará inactivo.")) { 
+            if (confirm("¿Confirmar cierre final de jornada laboral?")) { 
                 await DatabaseService.actualizarCamposUnidad(this.activeUnitIdForDialog, { finalizada: true }); 
                 this.dialogGestion.close(); 
             }
         });
     }
 
-    async _geocodificarDireccionAsync(direccionTexto) {
+    async _geocodificarDireccionAsync(direccionTexto, dniAsociado = null) {
+        // ESCUDO INTEGRADO: Si hay un DNI, verificamos primero en la base de clientes maestros
+        if (dniAsociado) {
+            try {
+                const snapCliente = await DatabaseService.obtenerClientePorIdDocumento(dniAsociado);
+                if (!snapCliente.empty) {
+                    let coordFichero = null;
+                    snapCliente.forEach(docSnap => {
+                        const c = docSnap.data();
+                        if (c.coordenadas && typeof c.coordenadas.lat === 'number') {
+                            coordFichero = { lat: c.coordenadas.lat, lng: c.coordenadas.lng };
+                        } else if (typeof c.latitud === 'number') {
+                            coordFichero = { lat: c.latitud, lng: c.longitud };
+                        }
+                    });
+                    if (coordFichero) {
+                        console.log("🛡️ [ESCUDO CLIENTES] Coordenadas extraídas del Fichero Maestro de forma exacta:", coordFichero);
+                        return coordFichero;
+                    }
+                }
+            } catch (errEscudo) {
+                console.warn("Fallo en bypass del escudo de clientes, recurriendo a pasarela externa:", errEscudo);
+            }
+        }
+
+        // Hardcoded Bypass preventivo para la traza de Sanguinetti, Villa Astolfi
         if (direccionTexto.toLowerCase().includes("sanguinetti")) {
+            console.log("🎯 Intercepción: Forzando coordenadas correctas esquina de Sanguinetti 3530.");
             return { lat: -34.49983, lng: -58.86431 };
         }
 
         const esZonaPilar = direccionTexto.toLowerCase().includes("astolfi") || direccionTexto.toLowerCase().includes("pilar");
         const latBase = esZonaPilar ? -34.4998 : -34.4824;
         const lngBase = esZonaPilar ? -58.8643 : -58.5032; 
-
-        if (this.coordenadasClienteCache && !isNaN(this.coordenadasClienteCache.lat)) {
-            return this.coordenadasClienteCache;
-        }
 
         let queryLimpia = direccionTexto.trim();
         queryLimpia = queryLimpia.replace(/[A-Z]?\d{4}[A-Z]{3}/gi, '');
@@ -351,7 +365,7 @@ export class DashboardController {
                 }
             }
         } catch (err) { 
-            console.warn("Pasarela de OpenStreetMap saturada. Derivando a centroide ponderado."); 
+            console.warn("API de OpenStreetMap saturada. Derivando a aproximación ponderada."); 
         }
         
         const variacionLat = (Math.random() - 0.5) * 0.001;
@@ -371,7 +385,7 @@ export class DashboardController {
             } catch (err) { 
                 this.btnProcesar.disabled = true; 
                 this.pedidosCargadosExcel = []; 
-                alert("❌ Error estructural al parsear la planilla de Excel Jumbo."); 
+                alert("❌ Error estructural al procesar el archivo Excel."); 
             }
         });
 
@@ -386,12 +400,14 @@ export class DashboardController {
 
                     for (const p of this.pedidosCargadosExcel) {
                         this.coordenadasClienteCache = null;
-                        const coordReal = await this._geocodificarDireccionAsync(p.direccion_entrega || p.direccion);
+                        // Pasamos el DNI de la planilla para activar el escudo de clientes
+                        const dniFila = p.clienteDni || p.dni_cliente;
+                        const coordReal = await this._geocodificarDireccionAsync(p.direccion_entrega || p.direccion, dniFila);
                         pedidosEstructurados.push({ ...p, coordenada: coordReal, fecha_creacion: fechaActualBarra });
                     }
 
                     await DatabaseService.guardarPedidosMasivos(pedidosEstructurados);
-                    alert(`¡Inyección masiva y geocodificación completada con éxito!`);
+                    alert(`¡Inyección en lote completada con protección de Fichero Maestro de Clientes!`);
                     this.pedidosCargadosExcel = []; 
                     this.excelInput.value = ""; 
                     this.fileNameDisplay.textContent = "Ningún archivo seleccionado";
@@ -412,29 +428,11 @@ export class DashboardController {
             const usarDireccionSelect = this.pDireccionSelectGroup && this.pDireccionSelectGroup.style.display === "block";
             const direccionFinal = usarDireccionSelect ? this.pDireccionSelect.value : this.pDireccionNueva.value.trim();
 
-            if (!direccionFinal) { alert("⚠️ Campo mandatorio: Especifique un domicilio operativo."); return; }
+            if (!direccionFinal) { alert("⚠️ Especifique un domicilio válido."); return; }
             const dniConsultado = this.pDniInput.value.trim();
 
-            if (!this.coordenadasClienteCache && dniConsultado) {
-                try {
-                    const snap = await DatabaseService.obtenerClientePorIdDocumento(dniConsultado);
-                    if (!snap.empty) {
-                        snap.forEach(docSnap => {
-                            const cData = docSnap.data();
-                            if (typeof cData.latitud !== 'undefined' && typeof cData.longitud !== 'undefined') {
-                                this.coordenadasClienteCache = {
-                                    lat: parseFloat(cData.latitud),
-                                    lng: parseFloat(cData.longitud)
-                                };
-                            }
-                        });
-                    }
-                } catch (errRef) {
-                    console.warn("No se pudo interceptar geolocalización por ID único:", errRef);
-                }
-            }
-
-            const coordRealSetteada = await this._geocodificarDireccionAsync(direccionFinal);
+            // Forzamos bypass directo por caché local o consulta al escudo por DNI
+            const coordRealSetteada = await this._geocodificarDireccionAsync(direccionFinal, dniConsultado);
 
             const dataManualOrder = {
                 clienteDni: dniConsultado,
@@ -449,7 +447,7 @@ export class DashboardController {
             try {
                 if (this.pedidoIdEnEdicion) {
                     await DatabaseService.actualizarPedido(this.pedidoIdEnEdicion, dataManualOrder);
-                    alert(`¡Orden modificada con éxito en la jornada!`);
+                    alert(`¡Orden modificada con éxito!`);
                 } else {
                     dataManualOrder.esCritico = false; 
                     dataManualOrder.interno_asignado = null;
@@ -492,7 +490,7 @@ export class DashboardController {
                         }
                     });
 
-                    if (!datosMaestros) { alert(`❌ Unidad inexistente en la flota maestra central.`); return; }
+                    if (!datosMaestros) { alert(`❌ No se encontró la unidad en el maestro.`); return; }
 
                     await DatabaseService.despacharNuevaUnidad({
                         interno: idInternoEncontrado, 
@@ -543,18 +541,18 @@ export class DashboardController {
             const fraSegura = Sanitizer.escapeHTML(p.franjaHoraria || '10:00-14:00');
 
             return `
-                <div class="card-panel manual-order-item-row ${p.esCritico ? 'card-panel--danger-alert' : ''}">
+                <div class="card-panel manual-order-item-row ${p.esCritico ? 'order-item--critical' : ''}" style="display:flex; justify-content:space-between; align-items:center; padding: 0.5rem 0.75rem; gap: 0.5rem;">
                     <div>
                         <strong>Orden: #${Sanitizer.escapeHTML(numPed)}${iconoFuego}</strong><br>
-                        <span class="manual-order-item-row__dni">DNI: ${Sanitizer.escapeHTML(dniCli)}</span>
+                        <span class="sub-text-dni" style="font-size:0.75rem; color:#64748b;">DNI: ${Sanitizer.escapeHTML(dniCli)}</span>
                     </div>
-                    <div class="search-input-inline">
-                        <span class="badge badge--info">$${impSeguro.toLocaleString('es-AR')}</span>
-                        <button class="btn-primary btn-edit-pedido-inline" style="width: auto; padding: 0.25rem 0.5rem;"
+                    <div style="display:flex; align-items:center; gap:0.4rem;">
+                        <span class="badge badge--info" style="font-size:0.72rem;">$${impSeguro.toLocaleString('es-AR')}</span>
+                        <button class="btn-secondary btn-edit-pedido-inline" style="padding:0.25rem; font-size:0.75rem; background-color:#334155; color:#38bdf8; border:none; border-radius:4px; cursor:pointer;"
                                 data-id="${idSeguro}" data-numero="${Sanitizer.escapeHTML(numPed)}" data-dni="${Sanitizer.escapeHTML(dniCli)}" data-importe="${impSeguro}" data-franja="${fraSegura}" data-direccion="${dirSegura}">
                             ✏️
                         </button>
-                        <button class="btn-primary btn-delete-pedido-inline" style="width: auto; padding: 0.25rem 0.5rem; background-color: rgba(239,68,68,0.15); color: #ef4444;" data-id="${idSeguro}">
+                        <button class="btn-danger btn-delete-pedido-inline" style="padding:0.25rem; font-size:0.75rem; background-color:rgba(239,68,68,0.15); color:#ef4444; border:none; border-radius:4px; cursor:pointer;" data-id="${idSeguro}">
                             ❌
                         </button>
                     </div>
@@ -570,7 +568,7 @@ export class DashboardController {
             btn.addEventListener('click', async (e) => {
                 const targetBtn = e.target.closest('.btn-delete-pedido-inline');
                 const id = targetBtn.getAttribute('data-id');
-                if (confirm("⚠️ ¿Desea eliminar este pedido del panel de carga definitivamente?")) {
+                if (confirm("⚠️ ¿Desea eliminar este pedido del panel de carga?")) {
                     await DatabaseService.removerPedido(id);
                 }
             });
@@ -615,25 +613,20 @@ export class DashboardController {
                         const c = docSnap.data();
                         optionsHtml += `<option value="${Sanitizer.escapeHTML(c.direccion)}">${Sanitizer.escapeHTML(c.direccion)}</option>`;
                         
-                        if (typeof c.latitud !== 'undefined' && typeof c.longitud !== 'undefined') {
-                            this.coordenadasClienteCache = {
-                                lat: parseFloat(c.latitud),
-                                lng: parseFloat(c.longitud)
-                            };
+                        if (c.coordenadas && typeof c.coordenadas.lat === 'number') {
+                            this.coordenadasClienteCache = { lat: c.coordenadas.lat, lng: c.coordenadas.lng };
+                        } else if (typeof c.latitud === 'number') {
+                            this.coordenadasClienteCache = { lat: c.latitud, lng: c.longitud };
                         }
                     });
                     if (this.pDireccionSelect) {
                         this.pDireccionSelect.innerHTML = optionsHtml;
                         if (this.pDireccionSelectGroup) {
                             this.pDireccionSelectGroup.style.display = "block";
-                            this.pDireccionSelectGroup.setAttribute('aria-hidden', 'false');
                         }
                     }
                 } else {
-                    if (this.pDireccionSelectGroup) {
-                        this.pDireccionSelectGroup.style.display = "none";
-                        this.pDireccionSelectGroup.setAttribute('aria-hidden', 'true');
-                    }
+                    if (this.pDireccionSelectGroup) this.pDireccionSelectGroup.style.display = "none";
                     this.coordenadasClienteCache = null;
                 }
             });
@@ -641,12 +634,7 @@ export class DashboardController {
     }
 }
 
-// Inicialización controlada y limpieza de listeners colgados
 document.addEventListener('DOMContentLoaded', () => {
     const dashboardCtrl = new DashboardController();
     dashboardCtrl.init();
-
-    window.addEventListener('beforeunload', () => {
-        dashboardCtrl.unmountCanales();
-    });
 });

@@ -103,14 +103,15 @@ export class ClientesController {
         this.#mapaAuxiliar = L.map('mapa-auxiliar-cliente', {
             center: [lat, lng],
             zoom: ZOOM_ZONA,
-            // Accesibilidad: permite navegación con teclado
             keyboard: true,
         });
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        // ✅ CartoDB Positron — tiles claros, sin restricción CORS, gratuitos
+        // Alternativa profesional a OSM para producción sin backend
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
             maxZoom: 19,
-            // Atribución correcta y obligatoria de OSM
-            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            subdomains: 'abcd',
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/">CARTO</a>',
         }).addTo(this.#mapaAuxiliar);
 
         this.#marcadorMovible = L.marker([lat, lng], { draggable: true })
@@ -122,7 +123,6 @@ export class ClientesController {
             this.#coordenadasSeleccionadas.lng = newLng;
         });
 
-        // Fuerza renderizado correcto si el contenedor tenía height 0 al cargar
         setTimeout(() => this.#mapaAuxiliar?.invalidateSize(), 150);
     }
 
@@ -185,39 +185,36 @@ export class ClientesController {
      * @param {string} direccionTexto
      * @returns {Promise<{lat: number, lng: number, esFallback: boolean}>}
      */
+    
     async #consultarNominatim(direccionTexto) {
-        // Construcción limpia del query: zona operativa por defecto
         let query = Sanitizer.sanitizeText(direccionTexto);
         const queryLower = query.toLowerCase();
-        
+
+        // Agregar contexto geográfico si no está presente
         if (!queryLower.includes('buenos aires') && !queryLower.includes('argentina')) {
             query += ', Buenos Aires, Argentina';
         }
 
-        const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ar&q=${Sanitizer.sanitizeForUrl(query)}`;
+        // ✅ Photon (komoot) — geocodificador OSM sin restricción CORS
+        // Documentación: https://photon.komoot.io/
+        const url = `https://photon.komoot.io/api/?q=${Sanitizer.sanitizeForUrl(query)}&limit=1&lang=es&bbox=-63.983,-41.035,-53.533,-33.261`;
+        //                                                                                    ↑ bbox de la Provincia de Buenos Aires
 
         try {
             const respuesta = await fetch(url, {
-                headers: {
-                    // User-Agent requerido por la política de uso de Nominatim
-                    'User-Agent': 'MartinezRouting/2.5 (contacto@martinezrouting.com)',
-                    'Accept-Language': 'es',
-                },
-                // Timeout de 8 segundos
                 signal: AbortSignal.timeout(8000),
             });
 
             if (!respuesta.ok) {
-                throw new Error(`Nominatim respondió con HTTP ${respuesta.status}`);
+                throw new Error(`Photon respondió con HTTP ${respuesta.status}`);
             }
 
             const datos = await respuesta.json();
 
-            if (Array.isArray(datos) && datos.length > 0) {
-                const lat = parseFloat(datos[0].lat);
-                const lng = parseFloat(datos[0].lon);
+            // Photon devuelve GeoJSON: features[0].geometry.coordinates = [lng, lat]
+            if (datos?.features?.length > 0) {
+                const [lng, lat] = datos.features[0].geometry.coordinates;
 
-                // Validar que las coordenadas sean geográficamente razonables
                 const validacion = Sanitizer.validateCoordenadas(lat, lng);
                 if (validacion.valid) {
                     return { lat, lng, esFallback: false };
@@ -225,13 +222,13 @@ export class ClientesController {
             }
         } catch (err) {
             if (err.name === 'TimeoutError') {
-                console.warn('[Geocodificación] Timeout — Nominatim no respondió en 8s.');
+                console.warn('[Geocodificación] Timeout — Photon no respondió en 8s.');
             } else {
                 console.warn('[Geocodificación] Error de red:', err.message);
             }
         }
 
-        // Fallback: mantener la última posición conocida (no el Obelisco)
+        // Fallback: mantener última posición conocida
         return {
             lat: this.#coordenadasSeleccionadas.lat,
             lng: this.#coordenadasSeleccionadas.lng,
